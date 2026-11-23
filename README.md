@@ -1,20 +1,26 @@
 # Echo Basin
 
-A website for a national park that doesn't exist. It opens like any park site, with trails, rangers and a lodge, and gets stranger the further down you scroll.
+![The top of the Echo Basin National Park website](docs/screenshot.jpg)
 
-The whole site is one HTML file. The pictures are SVG drawn by code and the fonts are packed in, so it works offline. To see it, open `dist/index.html` in a browser.
+This is the website for Echo Basin National Park. The park doesn't exist, but the site is built to look like it does, with trail tables, lodge hours, a staff page and everything else you'd expect.
 
-## Build
+There's a story hidden in it, but the site plays it completely straight and never lets on. As you scroll, the alerts get reworded and the rules get stricter, and a few people on the staff page stop turning up. Nothing explains what's going on in the basin. You work it out from the details, the way you would if you'd found the page by accident.
+
+I'm still adding to it, so expect things to change.
+
+## Looking at it
+
+Open `dist/index.html` in a browser. Everything is inside that one file, so it works offline.
+
+## Working on it
 
     node build.mjs
 
-That writes `dist/index.html`. It needs Node 18 or newer and nothing else.
+That rebuilds `dist/index.html`. There's nothing to install. It's been built with Node 22, and older versions probably work.
 
-Where things are:
+- `src/content.mjs` is all the writing, including what each line turns into further down the page
+- `src/scene-*.mjs` draw the pictures. They're SVG made by code, so there are no image files
+- `src/site.css` and `src/runtime.js` handle the layout and the scrolling
+- `echo-check.mjs` checks that the echo diagram still agrees with the park map
 
-- `src/content.mjs` has all the text, and how it changes as you scroll
-- `src/scene-*.mjs` draw the pictures
-- `src/site.css` and `src/runtime.js` are the layout and the scroll behavior
-- `fonts/` has Fraunces and Source Sans 3 (SIL Open Font License) and Special Elite (Apache 2.0)
-
-Echo Basin National Park isn't real, and neither is anyone in it.
+The fonts are Fraunces and Source Sans 3 (SIL Open Font License) and Special Elite (Apache 2.0).
