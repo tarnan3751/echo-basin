@@ -2,11 +2,11 @@
 
 ![The top of the Echo Basin National Park website](docs/screenshot.jpg)
 
-This is the website for Echo Basin National Park. The park doesn't exist, but the site is built to look like it does, with trail tables, lodge hours, a staff page and everything else you'd expect.
+This is the visitor website for Echo Basin National Park. I built it for the park authority over the summer and I've looked after it since.
 
-There's a story hidden in it, but the site plays it completely straight and never lets on. As you scroll, the alerts get reworded and the rules get stricter, and a few people on the staff page stop turning up. Nothing explains what's going on in the basin. You work it out from the details, the way you would if you'd found the page by accident.
+None of the text is mine. Staff send in the trail conditions, alerts and closures, and the site posts whatever comes in. Since about the middle of September the updates have been getting strange, and I can't get anyone at the park office to pick up the phone. I've left everything exactly as it was sent. Read down the page and you'll see what I mean. A few of the people on the staff page stop being mentioned.
 
-I'm still adding to it, so expect things to change.
+Updates are still coming in from somewhere, so this will keep changing. If you've been up to the basin lately, I'd like to hear from you.
 
 ## Looking at it
 
@@ -18,7 +18,7 @@ Open `dist/index.html` in a browser. Everything is inside that one file, so it w
 
 That rebuilds `dist/index.html`. There's nothing to install. It's been built with Node 22, and older versions probably work.
 
-- `src/content.mjs` is all the writing, including what each line turns into further down the page
+- `src/content.mjs` is all the text, with every version of each line in the order it came in
 - `src/scene-*.mjs` draw the pictures. They're SVG made by code, so there are no image files
 - `src/site.css` and `src/runtime.js` handle the layout and the scrolling
 - `echo-check.mjs` checks that the echo diagram still agrees with the park map
