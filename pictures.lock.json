@@ -1,0 +1,152 @@
+{
+  "hero": {
+    "hash": "e9b25ee3460a1b29a64e343e23657e0dd7d0f4d55e6bc3d0186d5175f31574cd",
+    "bytes": 612938,
+    "ids": 160,
+    "grains": 17
+  },
+  "oldgrowth": {
+    "hash": "a5d613f743931b9e7bbeabb362999e55d35261f27216badb858b3f533f150e0f",
+    "bytes": 410620,
+    "ids": 85,
+    "grains": 15
+  },
+  "high": {
+    "hash": "fd3dc1c916217914d6f68cc7b7b5a6478dcb790fbc7f12f1b7dda53c66b9c49e",
+    "bytes": 317753,
+    "ids": 236,
+    "grains": 4
+  },
+  "map": {
+    "hash": "8eb3e8c4f9881020177729bdc84772b49548d04818c1e88075ab019bf44896b9",
+    "bytes": 251192,
+    "ids": 10,
+    "grains": 1
+  },
+  "rangers": {
+    "hash": "92e260c3f5c2b0c6cc23a3aebdc6098f317cff4ef3f7fc12c47d0f2ab174b11a",
+    "bytes": 415060,
+    "ids": 111,
+    "grains": 20
+  },
+  "meadow": {
+    "hash": "7455af4e295e14e6097e26872ca6d86495ec00a629af91819f8da46f1e6f34cd",
+    "bytes": 672933,
+    "ids": 462,
+    "grains": 7
+  },
+  "lodge": {
+    "hash": "51c13879f271e7c2d45e6f885c8c9b51c33e6cc086e7360e5652dc454c801989",
+    "bytes": 488558,
+    "ids": 127,
+    "grains": 16
+  },
+  "night": {
+    "hash": "e30bc5df7e06c6d2ad4cf9c1592f68b12e59fb0767f8bf55b947129b7cec3b41",
+    "bytes": 345203,
+    "ids": 207,
+    "grains": 4
+  },
+  "portrait": {
+    "hash": "b3fcca723871ba8f8a89a40f04db31624db5b64d2ee1e8676d415a599e4bd006",
+    "bytes": 87015,
+    "ids": 91,
+    "grains": 4
+  },
+  "finale": {
+    "hash": "3fe714c1827eebfec6e8b33b11b4acfb03c1399c4c6eed11c9a18ec99fd86279",
+    "bytes": 293027,
+    "ids": 67,
+    "grains": 7
+  },
+  "echo": {
+    "hash": "aaa25a868549966a53971e44155aad3f627bc9209b614b7528c1e947a1371af8",
+    "bytes": 330758,
+    "ids": 153,
+    "grains": 0
+  },
+  "tracks": {
+    "hash": "868680e811f3486b8e48b4e66e3dafc38c1a8e7a59189ef7f0bc391700b500f0",
+    "bytes": 73381,
+    "ids": 38,
+    "grains": 0
+  },
+  "conditions": {
+    "hash": "555d2db999d9b6f12fcc079493cb52359d188451119b01751bf62f1df5658df8",
+    "bytes": 23137,
+    "ids": 0,
+    "grains": 0
+  },
+  "daylight": {
+    "hash": "a052f228c4d8daadecc14cab255590fee396623bda77ff23cb077cf928524108",
+    "bytes": 25668,
+    "ids": 4,
+    "grains": 0
+  },
+  "depth": {
+    "hash": "d589e37b5354b1b26283cd54bf42559eccde3737aba6745fdd7d1363bcf6add6",
+    "bytes": 65630,
+    "ids": 32,
+    "grains": 4
+  },
+  "sitePlan": {
+    "hash": "75f5ab3c77fa46626d44fbb6d8822f441fafed0b63b64428ae7db65f256ebc13",
+    "bytes": 104069,
+    "ids": 12,
+    "grains": 0
+  },
+  "profile": {
+    "hash": "629b71ef3d4ca5fe9726a9774c2d9589fb369c927a3149e2fc4e26f9f5b1d2eb",
+    "bytes": 87124,
+    "ids": 9,
+    "grains": 0
+  },
+  "survey": {
+    "hash": "4067e34cfd31b5bd3be067a17aadc815440b27857d9772870cc88b26295069d3",
+    "bytes": 150728,
+    "ids": 16,
+    "grains": 0
+  },
+  "mapLakeshore": {
+    "hash": "e80bcd734c6eeb737ac5330381cd577416e24ad65af682492ee0463323019aab",
+    "bytes": 26791,
+    "ids": 8,
+    "grains": 1
+  },
+  "mapCathedral": {
+    "hash": "90b75819a17720a7750d75564aa7c682c5d6d025c5ca5a72924c8ad1ee8736f6",
+    "bytes": 17611,
+    "ids": 8,
+    "grains": 1
+  },
+  "mapEchoPoint": {
+    "hash": "75e1e2934a6ad52f0d2a2cc289ff35d2ac04cee54397921f8bd89b0462d49cbc",
+    "bytes": 20607,
+    "ids": 8,
+    "grains": 1
+  },
+  "mapHalloran": {
+    "hash": "d7a4982bda80d94523fb56efedd96f83d2176519fdd25d5750b8eac476e4d94b",
+    "bytes": 24599,
+    "ids": 8,
+    "grains": 1
+  },
+  "mapEchoPass": {
+    "hash": "73edc885d57b47afadc9d07004b2df51d20a1e09b51e6883c0de5985629b321e",
+    "bytes": 37987,
+    "ids": 9,
+    "grains": 1
+  },
+  "sign": {
+    "hash": "913eefe7b011fd59ea98edfb718b898b27f72c494c6a25dab4944bbfdd0ef078",
+    "bytes": 183587,
+    "ids": 35,
+    "grains": 6
+  },
+  "vista": {
+    "hash": "ab56b9c9b75206bb1e144f7ed41f913ec62fe7c1585f4f023e4efec4a69001d0",
+    "bytes": 566280,
+    "ids": 104,
+    "grains": 8
+  }
+}

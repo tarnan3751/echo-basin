@@ -227,83 +227,53 @@ export function sheetPart(x0, y0, x1, y1, step = 200){
   return { lines, shore: isoLoops(lakeIn, 0).filter(l => l.some(inside)) };
 }
 
-export function map(){
-  L.usePalette('gold'); L.begin();
-  const P = L.P, o = [], m = [], top = [];
-  const paper = '#F3EAD3', ink = '#2A2438', brown = '#A8755F', water = P.teal, waterFill = mix(P.tealLight, '#FFFFFF', 0.6), red = P.coral, redDeep = P.coralSh;
-  const sans = `font-family="'Source Sans 3', sans-serif"`, serif = `font-family="Fraunces, serif" style="font-variation-settings:'SOFT' 60,'opsz' 20,'wght' 500,'WONK' 0"`;
-  const halo = `stroke="${paper}" stroke-width="3" stroke-linejoin="round" paint-order="stroke"`;
-  o.push(`<rect width="${W}" height="${H}" fill="${paper}"/>`);
-  const frame = clip(`M28,28 H972 V672 H28Z`);
-  const at = t => onPath(t), [LODGE, FLATS, POINT, HUT, MEADOW, PASS] = [PLACE.lodge, PLACE.flats, PLACE.point, PLACE.hut, PLACE.meadows, PLACE.pass].map(at);
-
-  // ---- ground cover, read off the heights: forest below the tree line, open ground above it, snow on the highest
-  // and the north-facing slopes, and the wet meadows on their bench
+// ---------- what is on the sheet, worked out once ----------
+// Every line, tint and place below is read off the grid in sheet units. The park map and each window cut from it draw
+// from this one set, so a window can never show the ground differently from the map.
+let GEO;
+function sheetGeo(){
+  if (GEO) return GEO;
+  const at = onPath, [LODGE, FLATS, POINT, HUT, MEADOW, PASS] = [PLACE.lodge, PLACE.flats, PLACE.point, PLACE.hut, PLACE.meadows, PLACE.pass].map(at);
+  // ground cover: forest below the tree line, open ground above it, snow on the highest and the north-facing slopes,
+  // and the wet meadows on their bench
   const treeline = gridOf((x, y, e) => 6750 + 260 * fbm(x / 60, y / 60, 5, 2) - e);
-  m.push(`<path d="${region(treeline, 0, { gap: 6 })}" fill="${mix(P.tealLight, paper, 0.74)}" fill-rule="evenodd"/>`);
   const meadowLine = smoothLine([[733, 184], [720, 200], [713, 224]], 4);
   const meadow = gridOf((x, y, e) => 21 - nearest(x, y, meadowLine).d - Math.abs(e - 6240) / 26 + 3 * fbm(x / 14, y / 14, 61, 2));
-  const meadowD = region(meadow, 0, { gap: 4, min: 20 });
-  m.push(`<path d="${meadowD}" fill="${mix(P.tealLight, P.cream, 0.74)}"/>`);
   const fallN = gridOf((x, y, e, i, j) => (i > 0 && j > 0 && i < GX - 1 && j < GY - 1) ? clamp((field[(j + 1) * GX + i] - field[(j - 1) * GX + i]) / 400, -1, 1) : 0);     // positive where the ground falls to the north
   const snow = gridOf((x, y, e, i, j) => e - 8300 + 420 * fallN[j * GX + i] + 140 * fbm(x / 40, y / 40, 31, 2));
-  const share = d => { const id = L.nid('mp'); L.defs.push(`<path id="${id}" d="${d}"/>`); return id; };       // a shape stored once, drawn as often as needed
-  const snowId = share(region(snow, 0, { gap: 5 }));
-  m.push(`<use href="#${snowId}" fill="#FFFDF6" fill-rule="evenodd"/>`);
-
-  // ---- relief: the slopes that face away from a light in the north-west are tinted, in two flat steps
-  {
-    let S = gridOf((x, y, e, i, j) => { if (i < 1 || j < 1 || i > GX - 2 || j > GY - 2) return 0.7; const sx = (field[j * GX + i + 1] - field[j * GX + i - 1]) / (2 * CELL * 88) * 2.2, sy = (field[(j + 1) * GX + i] - field[(j - 1) * GX + i]) / (2 * CELL * 88) * 2.2; return (0.5 * sx + 0.5 * sy + 0.707) / Math.sqrt(sx * sx + sy * sy + 1); });
-    for (let pass = 0; pass < 2; pass++) { const T = new Float32Array(S); for (let j = 1; j < GY - 1; j++) for (let i = 1; i < GX - 1; i++) { let a = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) a += S[(j + v) * GX + i + u]; T[j * GX + i] = a / 9; } S = T; }
-    const dark = lv => region(gridOf((x, y, e, i, j) => lv - S[j * GX + i]), 0, { gap: 8, min: 50 });
-    m.push(`<g fill="${P.plum}" fill-rule="evenodd"><path d="${dark(0.56)}" opacity="0.085"/><path d="${dark(0.4)}" opacity="0.085"/></g>`);
-  }
-  m.push(`<use href="#${snowId}" fill="none" stroke="#9DA9C4" stroke-width="0.9" stroke-dasharray="4 3"/>`);
-
-  // ---- contours every 200 ft, every fifth one heavier
-  let thin = '', heavy = ''; const indexLoops = [];
-  for (let lv = 3400; lv <= 9600; lv += 200) {
-    const loops = isoLoops(field, lv).filter(l => lengthOf(l) > 26), d = loops.map(l => loopPath(l, 6.2, 0.5)).join('');
-    if (lv % 1000 === 0) { heavy += d; loops.forEach(l => indexLoops.push([lv, l])); } else thin += d;
-  }
-  m.push(`<g fill="none" stroke="${brown}" stroke-linejoin="round"><path d="${thin}" stroke-width="0.55" opacity="0.6"/><path d="${heavy}" stroke-width="1.15" opacity="0.82"/></g>`);
-
-  // ---- water: creeks down the valley lines, the lake with two depth lines, a fall where Halloran Creek leaves its bench
+  // relief: how much each slope faces away from a light in the north-west, smoothed, cut at two levels
+  let S = gridOf((x, y, e, i, j) => { if (i < 1 || j < 1 || i > GX - 2 || j > GY - 2) return 0.7; const sx = (field[j * GX + i + 1] - field[j * GX + i - 1]) / (2 * CELL * 88) * 2.2, sy = (field[(j + 1) * GX + i] - field[(j - 1) * GX + i]) / (2 * CELL * 88) * 2.2; return (0.5 * sx + 0.5 * sy + 0.707) / Math.sqrt(sx * sx + sy * sy + 1); });
+  for (let pass = 0; pass < 2; pass++) { const T = new Float32Array(S); for (let j = 1; j < GY - 1; j++) for (let i = 1; i < GX - 1; i++) { let a = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) a += S[(j + v) * GX + i + u]; T[j * GX + i] = a / 9; } S = T; }
+  const dark = [0.56, 0.4].map(lv => gridOf((x, y, e, i, j) => lv - S[j * GX + i]));
+  // contours every 200 ft; the 1,000 ft ones are kept as points too, for their labels
+  const contours = [], indexLoops = [];
+  for (let lv = 3400; lv <= 9600; lv += 200) { const loops = isoLoops(field, lv).filter(l => lengthOf(l) > 26); contours.push([lv, loops]); if (lv % 1000 === 0) loops.forEach(l => indexLoops.push([lv, l])); }
+  // creeks down the valley lines, and the river out of the lake
   const springs = { halloran: [790, 124], cathedral: [466, 120], cedar: [606, 486], south: [620, 530], west1: [298, 170], west2: [138, 160], west3: [350, 306], knob: [450, 536], tolliver: [850, 250], east: [768, 380], far: [70, 250], south2: [240, 640], south3: [820, 560], north2: [610, 150] };
   const creekPts = {}; for (const k in springs) { const c = creekFrom(...springs[k]); if (c && lengthOf(c) > 40) creekPts[k] = thinned(c, 6); }
-  m.push(`<g fill="none" stroke="${water}" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"><path d="${Object.values(creekPts).map(curve).join(' ')}" stroke-width="0.9"/><path d="${curve(smoothLine([[92, 468], [44, 484], [20, 492]], 6))}" stroke-width="2.2"/></g>`);
-  const lakeD = region(lakeIn, 0, { gap: 4.5, q: 0.1 });
-  const lakeId = share(lakeD);
-  m.push(`<use href="#${lakeId}" fill="${waterFill}" fill-rule="evenodd"/><g fill="none" stroke="${water}" opacity="0.4" stroke-width="0.6"><path d="${region(lakeIn, 9, { gap: 6 })}"/><path d="${region(lakeIn, 18, { gap: 6 })}"/></g><use href="#${lakeId}" fill="none" stroke="${water}" stroke-width="1.2"/>`);
-  m.push(`<path d="M716,244 l7,2.4 M717.4,247.6 l7,2.4" stroke="${water}" stroke-width="1.1"/>`);
-
-  // ---- index contour labels, set where the heavy contours cross three straight ladders so the figures stack up a slope
-  {
-    let lab = '';
-    const ladders = [[[548, 420], [556, 640]], [[196, 410], [196, 120]], [[930, 440], [790, 330]], [[528, 266], [548, 40]]];
-    for (const [a, b] of ladders) for (const [lv, loop] of indexLoops) {
-      for (let i = 1; i < loop.length; i++) {
-        const p = loop[i - 1], q = loop[i], d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]), d2 = (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]);
-        if (d1 * d2 > 0) continue;
-        const t = d1 / (d1 - d2), x = lerp(p[0], q[0], t), y = lerp(p[1], q[1], t), u = ((x - a[0]) * (b[0] - a[0]) + (y - a[1]) * (b[1] - a[1])) / ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2);
-        if (u < 0 || u > 1 || x < 50 || x > 950 || y < 46 || y > 654) continue;
-        let ang = Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
-        lab += `<text x="${f(x)}" y="${f(y + 2.6)}" text-anchor="middle" transform="rotate(${f(ang)} ${f(x)} ${f(y)})">${lv.toLocaleString('en-US')}</text>`;
-        break;
-      }
+  const outlet = smoothLine([[92, 468], [44, 484], [20, 492]], 6);
+  // index contour figures, set where the heavy contours cross three straight ladders so the figures stack up a slope
+  const figures = [];
+  const ladders = [[[548, 420], [556, 640]], [[196, 410], [196, 120]], [[930, 440], [790, 330]], [[528, 266], [548, 40]]];
+  for (const [a, b] of ladders) for (const [lv, loop] of indexLoops) {
+    for (let i = 1; i < loop.length; i++) {
+      const p = loop[i - 1], q = loop[i], d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]), d2 = (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]);
+      if (d1 * d2 > 0) continue;
+      const t = d1 / (d1 - d2), x = lerp(p[0], q[0], t), y = lerp(p[1], q[1], t), u = ((x - a[0]) * (b[0] - a[0]) + (y - a[1]) * (b[1] - a[1])) / ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2);
+      if (u < 0 || u > 1 || x < 50 || x > 950 || y < 46 || y > 654) continue;
+      let ang = Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+      figures.push([x, y, ang, lv]);
+      break;
     }
-    m.push(`<g ${sans} font-size="7.6" font-weight="600" fill="${mix(brown, ink, 0.35)}" stroke="${paper}" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">${lab}</g>`);
   }
-
-  // ---- roads. Lakeshore Rd keeps a set distance back from the water, so it is read off the same grid as the shore.
+  // roads. Lakeshore Rd keeps a set distance back from the water, so it is read off the same grid as the shore.
   const ring = ringAt(lakeIn, -11);
   const lakeshore = thinned([[20, 470], [60, 462], ...ringPart(ring, [104, 450], [596, 362], [700, 262])], 7);
   const southRd = smoothLine([[650, 690], [644, 640], [632, 590], [620, 548], [612, 514], [604, 484], [606, 446], [598, 408], [600, 378], [596, 362]], 6);
-  const standRd = smoothLine([[427, 374], [431, 358], [436, 342]], 4);
-  const roadId = share(curve(lakeshore) + ' ' + curve(southRd)), spurId = share(curve(standRd));
-  m.push(`<g fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#${roadId}" stroke="${ink}" stroke-width="3.5"/><use href="#${spurId}" stroke="${ink}" stroke-width="2.6"/><use href="#${roadId}" stroke="#FFFDF6" stroke-width="1.9"/><use href="#${spurId}" stroke="#FFFDF6" stroke-width="1.2"/></g>`);
-
-  // ---- trails. Each is a line of points, so closures can be marked along it later.
+  // The spur to the Cathedral Stand parking leaves Lakeshore Rd where the road, as drawn, passes below the parking,
+  // and runs up to it. The parking stands close above the road, so the spur is short.
+  const standRd = [[436, 340.6], [436, 338]];
+  // trails. Each is a line of points, so closures can be marked along it later.
   const shorePath = ringAt(lakeIn, -4), bench = ringAt(lakeIn, -25);
   const T = {
     1: smoothLine([LODGE, ...thinned(ringPart(shorePath, [LODGE[0] - 14, LODGE[1] + 9], [566, 326], [600, 312]), 12), ...thinned(ringPart(bench, [562, 304], [LODGE[0] - 22, LODGE[1] - 16], [600, 286]), 12), LODGE], 3),
@@ -312,42 +282,192 @@ export function map(){
     4: smoothLine([POINT, [POINT[0] - 7, POINT[1] - 9], [POINT[0] + 6, POINT[1] - 14], [POINT[0] - 4, POINT[1] - 23], [POINT[0] + 12, POINT[1] - 27], [POINT[0] + 6, POINT[1] - 37], [696, 206], [708, 204], MEADOW], 3),
     5: smoothLine([MEADOW, [733, 196], [747, 188], [749, 172], [763, 168], [765, 151], HUT, [786, 138], [779, 127], [796, 123], [789, 112], [806, 108], PASS], 3),
   };
-  const trailId = share(Object.values(T).map(t => 'M' + t.map(q => `${f(q[0])},${f(q[1])}`).join(' L')).join(' '));
-  top.push(`<g fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#${trailId}" stroke="${paper}" stroke-width="3.4" opacity="0.85"/><use href="#${trailId}" stroke="${red}" stroke-width="1.7" stroke-dasharray="5 2.6"/></g>`);
+  const hutAt = T[5].findIndex(q => Math.hypot(q[0] - HUT[0], q[1] - HUT[1]) < 2);
+  // closed ground: north of the line below is the high side of the basin, and a closure takes everything on that side
+  // above a height, so its edge follows the contours
+  const divide = smoothLine([[-60, 508], [44, 484], [88, 470], [250, 440], [430, 385], [612, 318], [736, 268], [790, 312], [806, 392], [866, 430], [1060, 470]], 8);
+  const northSide = (x, y) => { const n = nearest(x, y, divide); return n.side < 0 ? n.d : -n.d; };
+  const northGrid = gridOf((x, y) => northSide(x, y));
+  const closure = Object.fromEntries([7500, 3760].map(ft => [ft, gridOf((x, y, e, i, j) => Math.min((e - ft) / 40, northGrid[j * GX + i]))]));
+  return GEO = { LODGE, FLATS, POINT, HUT, MEADOW, PASS, treeline, meadow, snow, dark, contours, indexLoops, creekPts, outlet, figures, lakeshore, southRd, standRd, T, hutAt, closure };
+}
+
+// ---------- cutting a window ----------
+// The part of a closed loop inside a box, cut against each side in turn. Where it was cut it runs along the box, which
+// lies outside the window's frame.
+function cutLoop(loop, box){
+  let pts = loop;
+  for (const [k, edge, dir] of [[0, box[0], 1], [0, box[2], -1], [1, box[1], 1], [1, box[3], -1]]) {
+    const out = [], inside = p => (p[k] - edge) * dir >= 0;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[(i + pts.length - 1) % pts.length], b = pts[i], ia = inside(a), ib = inside(b);
+      if (ia !== ib) { const t = (edge - a[k]) / (b[k] - a[k]), c = [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; c[k] = edge; out.push(c); }
+      if (ib) out.push(b);
+    }
+    pts = out;
+    if (!pts.length) break;
+  }
+  return pts;
+}
+// The stretches a cut leaves along the box are straight. A point is put a little in from each end of every such
+// stretch, so that the smooth curve drawn through the points turns the box's corners and leaves its own line where it
+// meets the box, instead of rounding both off inside the frame. (The box lies outside the frame.)
+function guard(pts, box, gap){
+  const along = (a, b) => [0, 1].some(k => [box[k], box[k + 2]].some(e => Math.abs(a[k] - e) < 1e-6 && Math.abs(b[k] - e) < 1e-6)), out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]), t = gap * 1.05 / len;
+    out.push(a);
+    if (along(a, b) && t < 0.45) out.push([lerp(a[0], b[0], t), lerp(a[1], b[1], t)], [lerp(a[0], b[0], 1 - t), lerp(a[1], b[1], 1 - t)]);
+  }
+  return out;
+}
+const meets = (pts, box) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of pts) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; } return x1 >= box[0] && x0 <= box[2] && y1 >= box[1] && y0 <= box[3]; };
+// the runs of an open line that fall inside a box, each carried one point past the box so it runs off the edge
+function runsIn(pts, box){
+  const inside = p => p[0] >= box[0] && p[0] <= box[2] && p[1] >= box[1] && p[1] <= box[3], runs = [];
+  let run = [];
+  for (let i = 0; i < pts.length; i++) {
+    if (inside(pts[i])) { if (!run.length && i > 0) run.push(pts[i - 1]); run.push(pts[i]); }
+    else if (run.length) { run.push(pts[i]); runs.push(run); run = []; }
+  }
+  if (run.length > 1) runs.push(run);
+  return runs;
+}
+// the same for a closed loop, going round from a point outside the box; null when the whole loop lies inside it
+function loopRuns(loop, box){
+  const k = loop.findIndex(p => p[0] < box[0] || p[0] > box[2] || p[1] < box[1] || p[1] > box[3]);
+  return k < 0 ? null : runsIn([...loop.slice(k), ...loop.slice(0, k + 1)], box);
+}
+// an open line as one smooth curve through points at least `gap` apart, written as steps rounded to q, like loopPath
+function openPath(pts, gap, q){
+  const p = thinned(pts, gap), n = p.length, r = v => Math.round(v / q) * q;
+  let cx = r(p[0][0]), cy = r(p[0][1]), d = `M${f(cx)},${f(cy)}`;
+  if (n === 2) return d + `l${f(r(p[1][0]) - cx)},${f(r(p[1][1]) - cy)}`;
+  for (let i = 1; i < n - 1; i++) {
+    const e = i === n - 2 ? p[n - 1] : [(p[i][0] + p[i + 1][0]) / 2, (p[i][1] + p[i + 1][1]) / 2], qx = r(p[i][0]), qy = r(p[i][1]), mx = r(e[0]), my = r(e[1]);
+    d += `q${f(qx - cx)},${f(qy - cy)} ${f(mx - cx)},${f(my - cy)}`; cx = mx; cy = my;
+  }
+  return d;
+}
+// every number in a small drawn shape multiplied by k, for a mark that is drawn larger in a window
+const scaled = (d, k) => k === 1 ? d : d.replace(/-?\d*\.?\d+/g, m => f(+m * k));
+const r2 = a => Math.round(a * 100) / 100;
+
+// ---------- the sheet, whole or a window of it ----------
+// v is the view. The whole sheet ({ full: true }) is the park map at its own size, with its title, legend, scale
+// panel and margin, drawn exactly as it always has been. A window (see sheetWindow) is a piece of the sheet enlarged:
+// the same ground, lines, symbols, names and revisions in the same places, with lines (kw) and lettering and symbols
+// (kt) sized for the window rather than magnified with it.
+function sheet(v){
+  L.usePalette('gold'); L.begin();
+  const full = !!v.full, P = L.P, o = [], m = [], top = [], g = sheetGeo();
+  const paper = '#F3EAD3', ink = '#2A2438', brown = '#A8755F', water = P.teal, waterFill = mix(P.tealLight, '#FFFFFF', 0.6), red = P.coral, redDeep = P.coralSh;
+  const sans = `font-family="'Source Sans 3', sans-serif"`, serif = `font-family="Fraunces, serif" style="font-variation-settings:'SOFT' 60,'opsz' 20,'wght' 500,'WONK' 0"`;
+  // where a point of the sheet falls in the picture; how numbers are written; how heavy a line is (w) and how large a
+  // piece of lettering, a symbol or an offset from one is (z). On the whole sheet all four leave things as they are.
+  const X = x => (x - v.x0) * v.s, Y = y => (y - v.y0) * v.s, n = full ? a => a : f;
+  const w = full ? a => a : a => r2(a * v.kw), z = full ? a => a : a => r2(a * v.kt);
+  const by = (p, dx = 0, dy = 0) => [X(p[0]) + z(dx), Y(p[1]) + z(dy)];
+  // the neatline, inside which the ground is drawn; in a window, what lies wholly outside it is left out
+  const fr = full ? [28, 28, 972, 672] : [v.i, v.i, v.W - v.i, v.H - v.foot];
+  const seen = (x, y, r = 0) => full || (x > fr[0] - r && x < fr[2] + r && y > fr[1] - r && y < fr[3] + r);
+  // A shape read off the grid. In a window, curves are drawn through closer points (g) and rounded to half a unit or
+  // a whole one. An area (loopIn) is cut to the window as a closed shape, for filling; a line (lineIn) is cut into the
+  // runs that cross the window.
+  const toOut = p => [X(p[0]), Y(p[1])], G = gap => gap * v.g, Q = q => q < 1 ? 0.5 : 1;
+  const loopIn = (l, gap, q) => { if (full) return loopPath(l, gap, q); if (!meets(l, v.cut)) return ''; const c = cutLoop(l, v.cut); return c.length < 3 ? '' : loopPath(guard(c.map(toOut), [X(v.cut[0]), Y(v.cut[1]), X(v.cut[2]), Y(v.cut[3])], G(gap)), G(gap), Q(q)); };
+  const lineIn = (l, gap, q) => { if (full) return loopPath(l, gap, q); if (!meets(l, v.cut)) return ''; const runs = loopRuns(l, v.cut); return runs ? runs.map(r => openPath(r.map(toOut), G(gap), Q(q))).join('') : loopPath(l.map(toOut), G(gap), Q(q)); };
+  const reg = (F, level, { gap = 5, min = 30, q = 1 } = {}, one = loopIn) => full ? region(F, level, { gap, min, q }) : isoLoops(F, level).filter(l => lengthOf(l) > min).map(l => one(l, gap, q)).join('');
+  const line = pts => full ? curve(pts) : runsIn(pts, v.cut).map(r => curve(r.map(toOut))).join(' ');
+  const halo = `stroke="${paper}" stroke-width="${z(3)}" stroke-linejoin="round" paint-order="stroke"`;
+  const FROM = full ? from : (k, s) => s ? from(k, s) : '', BETWEEN = full ? between : (a, b, s) => s ? between(a, b, s) : '';
+  o.push(`<rect width="${full ? W : v.W}" height="${full ? H : v.H}" fill="${paper}"/>`);
+  const frame = clip(`M${fr[0]},${fr[1]} H${fr[2]} V${fr[3]} H${fr[0]}Z`);
+  const at = t => onPath(t), { LODGE, FLATS, POINT, HUT, MEADOW, PASS, T, hutAt } = g;
+
+  // ---- ground cover, read off the heights
+  m.push(`<path d="${reg(g.treeline, 0, { gap: 6 })}" fill="${mix(P.tealLight, paper, 0.74)}" fill-rule="evenodd"/>`);
+  const meadowD = reg(g.meadow, 0, { gap: 4, min: 20 });
+  if (full || meadowD) m.push(`<path d="${meadowD}" fill="${mix(P.tealLight, P.cream, 0.74)}"/>`);
+  const share = d => { const id = L.nid('mp'); L.defs.push(`<path id="${id}" d="${d}"/>`); return id; };       // a shape stored once, drawn as often as needed
+  const snowD = reg(g.snow, 0, { gap: 5 }), snowId = full || snowD ? share(snowD) : null;
+  if (snowId) m.push(`<use href="#${snowId}" fill="#FFFDF6" fill-rule="evenodd"/>`);
+
+  // ---- relief: the slopes that face away from a light in the north-west are tinted, in two flat steps
+  m.push(`<g fill="${P.plum}" fill-rule="evenodd"><path d="${reg(g.dark[0], 0, { gap: 8, min: 50 })}" opacity="0.085"/><path d="${reg(g.dark[1], 0, { gap: 8, min: 50 })}" opacity="0.085"/></g>`);
+  if (snowId) m.push(`<use href="#${snowId}" fill="none" stroke="#9DA9C4" stroke-width="${w(0.9)}" stroke-dasharray="${w(4)} ${w(3)}"/>`);
+
+  // ---- contours every 200 ft, every fifth one heavier
+  let thin = '', heavy = '';
+  for (const [lv, loops] of g.contours) { const d = loops.map(l => lineIn(l, 6.2, 0.5)).join(''); if (lv % 1000 === 0) heavy += d; else thin += d; }
+  m.push(`<g fill="none" stroke="${brown}" stroke-linejoin="round"><path d="${thin}" stroke-width="${w(0.55)}" opacity="0.6"/><path d="${heavy}" stroke-width="${w(1.15)}" opacity="0.82"/></g>`);
+
+  // ---- water: creeks down the valley lines, the lake with two depth lines, a fall where Halloran Creek leaves its bench
+  const creeks = Object.values(g.creekPts).map(line).filter(d => full || d).join(' '), outlet = line(g.outlet);
+  m.push(`<g fill="none" stroke="${water}" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"><path d="${creeks}" stroke-width="${w(0.9)}"/>${full || outlet ? `<path d="${outlet}" stroke-width="${w(2.2)}"/>` : ''}</g>`);
+  const lakeD = reg(lakeIn, 0, { gap: 4.5, q: 0.1 });
+  const lakeId = full || lakeD ? share(lakeD) : null;
+  if (lakeId) m.push(`<use href="#${lakeId}" fill="${waterFill}" fill-rule="evenodd"/><g fill="none" stroke="${water}" opacity="0.4" stroke-width="${w(0.6)}"><path d="${reg(lakeIn, 9, { gap: 6 }, lineIn)}"/><path d="${reg(lakeIn, 18, { gap: 6 }, lineIn)}"/></g><use href="#${lakeId}" fill="none" stroke="${water}" stroke-width="${w(1.2)}"/>`);
+  if (seen(X(716), Y(244), 20)) m.push(`<path d="M${n(X(716))},${n(Y(244))} l${z(7)},${z(2.4)} M${n(X(716) + z(1.4))},${n(Y(244) + z(3.6))} l${z(7)},${z(2.4)}" stroke="${water}" stroke-width="${w(1.1)}"/>`);
+
+  // ---- index contour figures
+  {
+    let lab = '';
+    for (const [x, y, ang, lv] of g.figures) if (seen(X(x), Y(y), 20)) lab += `<text x="${f(X(x))}" y="${f(Y(y) + z(2.6))}" text-anchor="middle" transform="rotate(${f(ang)} ${f(X(x))} ${f(Y(y))})">${lv.toLocaleString('en-US')}</text>`;
+    if (full || lab) m.push(`<g ${sans} font-size="${z(7.6)}" font-weight="600" fill="${mix(brown, ink, 0.35)}" stroke="${paper}" stroke-width="${z(2.6)}" stroke-linejoin="round" paint-order="stroke">${lab}</g>`);
+  }
+
+  // ---- roads
+  const roadD = full ? curve(g.lakeshore) + ' ' + curve(g.southRd) : [line(g.lakeshore), line(g.southRd)].filter(Boolean).join(' '), spurD = line(g.standRd);
+  const roadId = full || roadD ? share(roadD) : null, spurId = full || spurD ? share(spurD) : null;
+  m.push(`<g fill="none" stroke-linecap="round" stroke-linejoin="round">${roadId ? `<use href="#${roadId}" stroke="${ink}" stroke-width="${w(3.5)}"/>` : ''}${spurId ? `<use href="#${spurId}" stroke="${ink}" stroke-width="${w(2.6)}"/>` : ''}${roadId ? `<use href="#${roadId}" stroke="#FFFDF6" stroke-width="${w(1.9)}"/>` : ''}${spurId ? `<use href="#${spurId}" stroke="#FFFDF6" stroke-width="${w(1.2)}"/>` : ''}</g>`);
+
+  // ---- trails. On the whole sheet all five are drawn alike. A window draws its own trail heavier, over the others.
+  const trailLine = t => full ? 'M' + t.map(q => `${f(q[0])},${f(q[1])}`).join(' L') : runsIn(t, v.cut).map(r => 'M' + r.map(q => `${f(X(q[0]))},${f(Y(q[1]))}`).join(' L')).join(' ');
+  if (full) {
+    const trailId = share(Object.values(T).map(trailLine).join(' '));
+    top.push(`<g fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#${trailId}" stroke="${paper}" stroke-width="3.4" opacity="0.85"/><use href="#${trailId}" stroke="${red}" stroke-width="1.7" stroke-dasharray="5 2.6"/></g>`);
+  } else {
+    const others = Object.keys(T).filter(k => +k !== v.hi).map(k => trailLine(T[k])).filter(Boolean).join(' '), mine = trailLine(T[v.hi]);
+    const oId = others ? share(others) : null, mId = share(mine);
+    top.push(`<g fill="none" stroke-linecap="round" stroke-linejoin="round">${oId ? `<use href="#${oId}" stroke="${paper}" stroke-width="${w(3)}" opacity="0.85"/><use href="#${oId}" stroke="${red}" stroke-width="${w(1.25)}" stroke-dasharray="${w(4.2)} ${w(2.4)}" opacity="0.85"/>` : ''}<use href="#${mId}" stroke="${paper}" stroke-width="${w(5.6)}" opacity="0.9"/><use href="#${mId}" stroke="${red}" stroke-width="${w(2.7)}" stroke-dasharray="${w(6.4)} ${w(3)}"/></g>`);
+  }
 
   // ---- revisions. From stage 3 the sheet is overprinted: closed ground in red, following the contours, with closed
   // trails crossed out; from stage 4 the path that was plotted across it, in black. Same grid, same line work.
-  const divide = smoothLine([[-60, 508], [44, 484], [88, 470], [250, 440], [430, 385], [612, 318], [736, 268], [790, 312], [806, 392], [866, 430], [1060, 470]], 8);     // north of this line is the high side of the basin
-  const northSide = (x, y) => { const n = nearest(x, y, divide); return n.side < 0 ? n.d : -n.d; };
-  const northGrid = gridOf((x, y) => northSide(x, y));
-  const closure = ft => region(gridOf((x, y, e, i, j) => Math.min((e - ft) / 40, northGrid[j * GX + i])), 0, { gap: 5, min: 60 });
-  L.defs.push(`<pattern id="mapHatch" width="7.2" height="7.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-42)"><rect width="1" height="7.2" fill="${redDeep}" opacity="0.36"/></pattern>`);
-  const closed = d => { const id = share(d); return `<use href="#${id}" fill="url(#mapHatch)" fill-rule="evenodd"/><use href="#${id}" fill="none" stroke="${redDeep}" stroke-width="1.3" stroke-dasharray="7 2.4 1.4 2.4" stroke-linejoin="round"/>`; };
+  const hatch = full ? 'mapHatch' : L.nid('mh');
+  L.defs.push(`<pattern id="${hatch}" width="${w(7.2)}" height="${w(7.2)}" patternUnits="userSpaceOnUse" patternTransform="rotate(-42)"><rect width="${w(1)}" height="${w(7.2)}" fill="${redDeep}" opacity="0.36"/></pattern>`);
+  const closed = d => { if (!full && !d) return ''; const id = share(d); return `<use href="#${id}" fill="url(#${hatch})" fill-rule="evenodd"/><use href="#${id}" fill="none" stroke="${redDeep}" stroke-width="${w(1.3)}" stroke-dasharray="${w(7)} ${w(2.4)} ${w(1.4)} ${w(2.4)}" stroke-linejoin="round"/>`; };
   const rev = [];
-  rev.push(between(3, 3, closed(closure(7500))) + from(4, closed(closure(3760))));
-  // crosses along a closed trail
-  const crosses = pts => { let d = ''; for (let s0 = 6, n = lengthOf(pts); s0 < n - 3; s0 += 11) { const [x, y] = walk(pts, s0); d += `M${f(x - 2.3)},${f(y - 2.3)} l4.6,4.6 M${f(x - 2.3)},${f(y + 2.3)} l4.6,-4.6 `; } return d; };
-  const hutAt = T[5].findIndex(q => Math.hypot(q[0] - HUT[0], q[1] - HUT[1]) < 2);
-  const crossStyle = d => { const id = share(d); return `<use href="#${id}" fill="none" stroke="${paper}" stroke-width="3" stroke-linecap="round" opacity="0.8"/><use href="#${id}" fill="none" stroke="${redDeep}" stroke-width="1.4" stroke-linecap="round"/>`; };
+  rev.push(BETWEEN(3, 3, closed(reg(g.closure[7500], 0, { gap: 5, min: 60 }))) + FROM(4, closed(reg(g.closure[3760], 0, { gap: 5, min: 60 }))));
+  // crosses along a closed trail, every so far along it, in the same places in a window as on the sheet
+  const crosses = pts => { let d = ''; for (let s0 = 6, len = lengthOf(pts); s0 < len - 3; s0 += 11) { const [x, y] = walk(pts, s0); if (!seen(X(x), Y(y), 8)) continue; d += `M${f(X(x) - z(2.3))},${f(Y(y) - z(2.3))} l${z(4.6)},${z(4.6)} M${f(X(x) - z(2.3))},${f(Y(y) + z(2.3))} l${z(4.6)},${-z(4.6)} `; } return d; };
+  const crossStyle = d => { if (!full && !d) return ''; const id = share(d); return `<use href="#${id}" fill="none" stroke="${paper}" stroke-width="${w(3)}" stroke-linecap="round" opacity="0.8"/><use href="#${id}" fill="none" stroke="${redDeep}" stroke-width="${w(1.4)}" stroke-linecap="round"/>`; };
 
   // the plotted path: one straight line on a bearing of 222 degrees, with a mark of direction every so often. Drawn
-  // solid over ground, where the marks were found, and broken over the lake, where it can only be inferred.
+  // solid over ground, where the marks were found, and broken over the lake, where it can only be inferred. A window
+  // keeps the stretch of it that crosses the window, with the marks where the sheet has them.
   const bearing = Math.atan2(PATH_DIR[1], PATH_DIR[0]) * 180 / Math.PI;
+  const span = full ? [-1e9, 1e9] : (() => { const c = v.cut, tx = [(c[2] - PATH_A[0]) / PATH_DIR[0], (c[0] - PATH_A[0]) / PATH_DIR[0]], ty = [(c[1] - PATH_A[1]) / PATH_DIR[1], (c[3] - PATH_A[1]) / PATH_DIR[1]]; return [Math.max(tx[0], ty[0]), Math.min(tx[1], ty[1])]; })();
   const plotted = (t0, t1) => {
-    const line = (u, v) => `M${f(at(u)[0])},${f(at(u)[1])} L${f(at(v)[0])},${f(at(v)[1])}`;
-    const dry = [[t0, Math.min(t1, PLACE.shoreN)], [Math.max(t0, PLACE.shoreS), t1]].filter(([u, v]) => v > u).map(([u, v]) => line(u, v)).join(' ');
-    const wet = [[Math.max(t0, PLACE.shoreN), Math.min(t1, PLACE.shoreS)]].filter(([u, v]) => v > u).map(([u, v]) => line(u, v)).join(' ');
+    const seg = (u, b) => { if (!full) { u = Math.max(u, span[0]); b = Math.min(b, span[1]); if (!(b > u)) return ''; } return `M${f(X(at(u)[0]))},${f(Y(at(u)[1]))} L${f(X(at(b)[0]))},${f(Y(at(b)[1]))}`; };
+    const dry = [[t0, Math.min(t1, PLACE.shoreN)], [Math.max(t0, PLACE.shoreS), t1]].filter(([u, b]) => b > u).map(([u, b]) => seg(u, b)).filter(d => full || d).join(' ');
+    const wet = [[Math.max(t0, PLACE.shoreN), Math.min(t1, PLACE.shoreS)]].filter(([u, b]) => b > u).map(([u, b]) => seg(u, b)).filter(d => full || d).join(' ');
     let ch = '';
-    for (let t = Math.ceil((t0 + 4) / 13) * 13; t <= t1 - 5; t += 13) { if (t > PLACE.shoreN - 3 && t < PLACE.shoreS + 3) continue; const [x, y] = at(t); ch += `<path d="M-2.8,-3.5 L1.5,0 L-2.8,3.5" transform="translate(${f(x)},${f(y)}) rotate(${f(bearing)})"/>`; }
-    return `<g fill="none"><path d="${line(t0, t1)}" stroke="${paper}" stroke-width="5.4" opacity="0.9"/>${dry ? `<path d="${dry}" stroke="${ink}" stroke-width="1.7"/>` : ''}${wet ? `<path d="${wet}" stroke="${ink}" stroke-width="1.7" stroke-dasharray="4.2 3.2"/>` : ''}<g stroke="${paper}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">${ch}</g><g stroke="${ink}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ch}</g></g>`;
+    for (let t = Math.ceil((t0 + 4) / 13) * 13; t <= t1 - 5; t += 13) { if (t > PLACE.shoreN - 3 && t < PLACE.shoreS + 3) continue; const [x, y] = at(t); if (!seen(X(x), Y(y), 10)) continue; ch += `<path d="${scaled('M-2.8,-3.5 L1.5,0 L-2.8,3.5', full ? 1 : v.kt)}" transform="translate(${f(X(x))},${f(Y(y))}) rotate(${f(bearing)})"/>`; }
+    const under = seg(t0, t1);
+    if (!full && !under) return '';
+    return `<g fill="none"><path d="${under}" stroke="${paper}" stroke-width="${w(5.4)}" opacity="0.9"/>${dry ? `<path d="${dry}" stroke="${ink}" stroke-width="${w(1.7)}"/>` : ''}${wet ? `<path d="${wet}" stroke="${ink}" stroke-width="${w(1.7)}" stroke-dasharray="${w(4.2)} ${w(3.2)}"/>` : ''}<g stroke="${paper}" stroke-width="${w(3.6)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">${ch}</g><g stroke="${ink}" stroke-width="${w(1.5)}" stroke-linecap="round" stroke-linejoin="round">${ch}</g></g>`;
   };
-  const head = t => { const [x, y] = at(t); return `<path d="M-6,-4.6 L4,0 L-6,4.6 L-3.6,0Z" transform="translate(${f(x)},${f(y)}) rotate(${f(bearing)})" fill="${ink}" stroke="${paper}" stroke-width="1.2" stroke-linejoin="round" paint-order="stroke"/>`; };
-  const alongPath = (t, off, txt, extra = '') => { const [x, y] = at(t), nx = -PATH_DIR[1], ny = PATH_DIR[0]; return `<text class="t" x="${f(x + nx * off)}" y="${f(y + ny * off)}" text-anchor="middle" transform="rotate(${f(bearing + 180)} ${f(x + nx * off)} ${f(y + ny * off)})" ${sans} font-size="8.6" font-weight="700" letter-spacing="0.7" fill="${ink}" ${halo}${extra}>${txt}</text>`; };
+  const head = t => { const [x, y] = at(t); if (!seen(X(x), Y(y), 10)) return ''; return `<path d="${scaled('M-6,-4.6 L4,0 L-6,4.6 L-3.6,0Z', full ? 1 : v.kt)}" transform="translate(${f(X(x))},${f(Y(y))}) rotate(${f(bearing)})" fill="${ink}" stroke="${paper}" stroke-width="${w(1.2)}" stroke-linejoin="round" paint-order="stroke"/>`; };
+  const alongPath = (t, off, txt, extra = '') => { const [x, y] = at(t), nx = -PATH_DIR[1], ny = PATH_DIR[0], lx = X(x) + nx * z(off), ly = Y(y) + ny * z(off); if (!seen(lx, ly, z(8.6) * 0.62 * txt.length)) return ''; return `<text class="t" x="${f(lx)}" y="${f(ly)}" text-anchor="middle" transform="rotate(${f(bearing + 180)} ${f(lx)} ${f(ly)})" ${sans} font-size="${z(8.6)}" font-weight="700" letter-spacing="${z(0.7)}" fill="${ink}" ${halo}${extra}>${txt}</text>`; };
   const EDGE = (672 - PATH_A[1]) / PATH_DIR[1], OUT = (691 - PATH_A[1]) / PATH_DIR[1];            // where the line meets the bottom of the frame, and where it stops in the margin
   const S4 = 170, S5 = 470;
 
-  // ---- point symbols: one family, pale pictograms on dark tiles
-  const tile = (x, y, d) => `<g transform="translate(${f(x)},${f(y)})"><rect x="-7.4" y="-7.4" width="14.8" height="14.8" rx="2.6" fill="${paper}"/><rect x="-6.3" y="-6.3" width="12.6" height="12.6" rx="2" fill="${ink}"/><g fill="${paper}">${d}</g></g>`;
+  // ---- point symbols: one family, pale pictograms on dark tiles. In a window a symbol is drawn larger by kt about
+  // its place on the sheet.
+  const sk = full ? '' : ` scale(${v.kt})`;
+  const tile = (x, y, d) => seen(X(x), Y(y), 20) ? `<g transform="translate(${f(X(x))},${f(Y(y))})${sk}"><rect x="-7.4" y="-7.4" width="14.8" height="14.8" rx="2.6" fill="${paper}"/><rect x="-6.3" y="-6.3" width="12.6" height="12.6" rx="2" fill="${ink}"/><g fill="${paper}">${d}</g></g>` : '';
   const PIC = {
     lodge: `<path d="M-4.6,4.6 V-0.6 L0,-4.8 L4.6,-0.6 V4.6 H1.4 V1.2 H-1.4 V4.6Z"/>`,
     camp: `<path d="M-5,4.4 L0,-4.6 L5,4.4 H1.9 L0,0.6 L-1.9,4.4Z"/>`,
@@ -357,35 +477,70 @@ export function map(){
     gate: `<path d="M-4.6,4.6 V-1.4 H4.6 V4.6 H2.4 V1 H-2.4 V4.6Z M-5.4,-1.4 L0,-4.8 L5.4,-1.4Z"/>`,
     park: `<path d="M-2.6,4.6 V-4.6 H1 A3,3 0 0 1 1,1.4 H-0.9 V4.6Z M-0.9,-3 V-0.2 H0.8 A1.4,1.4 0 0 0 0.8,-3Z" fill-rule="evenodd"/>`,
   };
-  const peak = (x, y) => `<path d="M${x},${y - 4.4} L${x + 4.2},${y + 3} L${x - 4.2},${y + 3}Z" fill="${ink}" stroke="${paper}" stroke-width="1.2" paint-order="stroke" stroke-linejoin="round"/>`;
+  const peak = (x, y) => seen(X(x), Y(y), 20) ? `<path d="M${n(X(x))},${n(Y(y) - z(4.4))} L${n(X(x) + z(4.2))},${n(Y(y) + z(3))} L${n(X(x) - z(4.2))},${n(Y(y) + z(3))}Z" fill="${ink}" stroke="${paper}" stroke-width="${z(1.2)}" paint-order="stroke" stroke-linejoin="round"/>` : '';
   const sym = [];
   sym.push(peak(892, 150) + peak(705, 58) + peak(330, 604));
-  { const d = `M-5.4,-5 Q-1.6,0 -5.4,5 M5.4,-5 Q1.6,0 5.4,5`, tr = `transform="translate(${PASS[0]},${PASS[1]}) rotate(-48)"`; sym.push(`<path d="${d}" ${tr} fill="none" stroke="${paper}" stroke-width="3.6" stroke-linecap="round"/><path d="${d}" ${tr} fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`); }
+  if (seen(X(PASS[0]), Y(PASS[1]), 20)) { const d = `M-5.4,-5 Q-1.6,0 -5.4,5 M5.4,-5 Q1.6,0 5.4,5`, tr = `transform="translate(${n(X(PASS[0]))},${n(Y(PASS[1]))}) rotate(-48)${sk}"`; sym.push(`<path d="${d}" ${tr} fill="none" stroke="${paper}" stroke-width="3.6" stroke-linecap="round"/><path d="${d}" ${tr} fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`); }
   sym.push(tile(...LODGE, PIC.lodge) + tile(...FLATS, PIC.camp) + tile(...HUT, PIC.hut) + tile(...POINT, PIC.view) + tile(613, 430, PIC.ranger) + tile(436, 338, PIC.park) + tile(47, 452, PIC.gate) + tile(634, 650, PIC.gate));
-  // trail numbers
-  const badge = (x, y, n) => `<circle cx="${x}" cy="${y}" r="6.6" fill="${paper}" stroke="${red}" stroke-width="1.5"/><text x="${x}" y="${y + 3.3}" text-anchor="middle" ${sans} font-size="9.4" font-weight="700" fill="${redDeep}">${n}</text>`;
+  // trail numbers. In a window a badge keeps to the point of its trail it stands beside on the sheet, at the distance
+  // it stands there grown with the badge, so it stays beside its trail and clear of the names around it. A window's
+  // own trail has the larger badge.
+  const badge = (x, y, num) => {
+    const k = full || num !== v.hi ? 1 : 1.3;
+    let bx = X(x), bY = Y(y);
+    if (!full) { const t = T[num], near = nearest(x, y, t), ax = attr(t, near, 0), ay = attr(t, near, 1); bx = X(ax) + z((x - ax) * k); bY = Y(ay) + z((y - ay) * k); }
+    if (!seen(bx, bY, 20)) return '';
+    return `<circle cx="${n(bx)}" cy="${n(bY)}" r="${z(6.6 * k)}" fill="${paper}" stroke="${red}" stroke-width="${z(1.5 * k)}"/><text x="${n(bx)}" y="${n(bY + z(3.3 * k))}" text-anchor="middle" ${sans} font-size="${z(9.4 * k)}" font-weight="700" fill="${redDeep}">${num}</text>`;
+  };
   sym.push(badge(604, 267, 1) + badge(417, 296, 2) + badge(668, 276, 3) + badge(654, 222, 4) + badge(762, 180, 5));
 
   // ---- lettering. Every label carries a halo in the colour of what lies under it, so no line runs through a word.
-  const lab = (x, y, t, { extra = '', size = 11.2, anchor = 'start', weight = 600, fill = ink, on = paper, cls = true } = {}) => `<text${cls ? ' class="t"' : ''} x="${x}" y="${y}" text-anchor="${anchor}" ${sans} font-size="${size}" font-weight="${weight}" fill="${fill}" stroke="${on}" stroke-width="3" stroke-linejoin="round" paint-order="stroke"${extra}>${t}</text>`;
-  const ital = (x, y, t, rot = 0, size = 8.8) => `<text x="${x}" y="${y}" ${sans} font-size="${size}" font-style="italic" font-weight="600" fill="${water}" stroke="${paper}" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke" letter-spacing="0.4"${rot ? ` transform="rotate(${rot} ${x} ${y})"` : ''}>${t}</text>`;
+  // A name's place is where it stands on the sheet, or, for the name of a symbol, an offset from the symbol that grows
+  // with the symbol in a window. One that lies wholly outside a window is left out of it.
+  // In a window a name is kept if any version of it (stage alternates included) reaches inside the frame. Widths are
+  // generous estimates; a name the frame cuts would show here, and the frames are chosen so that none is cut.
+  const reach = (t, size) => z(size) * 0.56 * t.replace(/<[^>]*>/g, '').length + z(6);
+  const shows = (x, y, t, extra, size, anchor) => { if (full) return true; const wd = Math.max(reach(t, size), ...[...extra.matchAll(/data-s\d="([^"]*)"/g)].map(m => reach(m[1], size))), a = anchor === 'end' ? x - wd : anchor === 'middle' ? x - wd / 2 : x; return a + wd > fr[0] && a < fr[2] && y + z(size) * 0.3 > fr[1] && y - z(size) < fr[3]; };
+  const lab = ([x, y], t, { extra = '', size = 11.2, anchor = 'start', weight = 600, fill = ink, on = paper, cls = true } = {}) => !shows(x, y, t, extra, size, anchor) ? '' : `<text${cls ? ' class="t"' : ''} x="${n(x)}" y="${n(y)}" text-anchor="${anchor}" ${sans} font-size="${z(size)}" font-weight="${weight}" fill="${fill}" stroke="${on}" stroke-width="${z(3)}" stroke-linejoin="round" paint-order="stroke"${extra}>${t}</text>`;
+  const ital = ([x, y], t, rot = 0, size = 8.8) => !(rot ? seen(x, y, reach(t, size)) : shows(x, y, t, '', size, 'start')) ? '' : `<text x="${n(x)}" y="${n(y)}" ${sans} font-size="${z(size)}" font-style="italic" font-weight="600" fill="${water}" stroke="${paper}" stroke-width="${z(2.6)}" stroke-linejoin="round" paint-order="stroke" letter-spacing="${z(0.4)}"${rot ? ` transform="rotate(${rot} ${n(x)} ${n(y)})"` : ''}>${t}</text>`;
   const txt = [];
-  L.defs.push(`<path id="lakeName" d="M288,443 Q410,414 560,354"/>`);
-  txt.push(`<text ${serif} font-size="19" font-style="italic" fill="${water}" letter-spacing="5"><textPath href="#lakeName" startOffset="50%" text-anchor="middle" class="t" data-s6="Crossed here">Echo Lake</textPath></text>`);
-  txt.push(`<text x="186" y="462" ${sans} font-size="8.4" font-style="italic" font-weight="600" fill="${water}" transform="rotate(-11 186 462)">3,540 ft</text>`);
-  txt.push(ital(36, 507, 'Echo River', -12) + ital(461, 214, 'Cathedral Creek', -84) + ital(741, 240, 'Halloran Cr.', 0));
-  { const [x, y, a] = walk(lakeshore, 330); txt.push(`<text x="${f(x)}" y="${f(y - 4.6)}" text-anchor="middle" transform="rotate(${f(a * 180 / Math.PI)} ${f(x)} ${f(y - 4.6)})" ${sans} font-size="8.6" font-weight="600" letter-spacing="0.6" fill="${ink}" stroke="${paper}" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">Lakeshore Rd</text>`); }
-  txt.push(lab(LODGE[0] + 4, LODGE[1] + 19, 'Basin Lodge', { on: waterFill }) + lab(FLATS[0] - 11, FLATS[1] + 1, 'Cedar Flats', { anchor: 'end', on: waterFill, extra: ` data-s4="Cedar Flats (closed)"` }));
-  txt.push(lab(624, 434, 'Ranger station', { extra: ` data-s5="Ranger station (1 staff)"` }) + lab(HUT[0] - 10, HUT[1] - 6, 'Pass Hut', { anchor: 'end', extra: ` data-s4="Pass Hut (do not enter)"` }) + lab(POINT[0] + 11, POINT[1] + 4, 'Echo Point', { extra: ` data-s3="Echo Point (no shouting)"` }));
-  txt.push(lab(MEADOW[0] + 18, MEADOW[1] + 22, 'Halloran Meadows', { extra: ` data-s4="Halloran Meadows (no elk)"` }) + lab(458, 290, 'Cathedral Stand'));
-  txt.push(lab(PASS[0] - 9, PASS[1] - 7, 'Echo Pass 8,560 ft', { anchor: 'end', size: 10.4 }) + lab(883, 148, 'Mt. Tolliver', { anchor: 'end' }) + lab(883, 159, '9,650 ft', { size: 9, weight: 500, anchor: 'end' }) + lab(713, 57, 'Corrie Peak') + lab(713, 68, '9,180 ft', { size: 9, weight: 500 }) + lab(322, 603, 'Low Knob', { anchor: 'end' }) + lab(322, 614, '5,940 ft', { size: 9, weight: 500, anchor: 'end' }));
-  txt.push(lab(604, 510, 'Cedar Gap', { anchor: 'end', size: 9.4, weight: 500 }) + lab(58, 448, 'West Entrance', { size: 10 }) + lab(624, 654, 'South Entrance', { size: 10, anchor: 'end' }));
+  {
+    // the lake's name runs along a curve; it is centred on the curve, so a window keeps it only if it holds that middle
+    if (seen(X(417), Y(410), z(80))) {
+      const id = full ? 'lakeName' : L.nid('ln');
+      L.defs.push(`<path id="${id}" d="M${n(X(288))},${n(Y(443))} Q${n(X(410))},${n(Y(414))} ${n(X(560))},${n(Y(354))}"/>`);
+      txt.push(`<text ${serif} font-size="${z(19)}" font-style="italic" fill="${water}" letter-spacing="${z(5)}"><textPath href="#${id}" startOffset="50%" text-anchor="middle" class="t" data-s6="Crossed here">Echo Lake</textPath></text>`);
+    }
+  }
+  if (seen(X(186), Y(462), 40)) txt.push(`<text x="${n(X(186))}" y="${n(Y(462))}" ${sans} font-size="${z(8.4)}" font-style="italic" font-weight="600" fill="${water}" transform="rotate(-11 ${n(X(186))} ${n(Y(462))})">3,540 ft</text>`);
+  txt.push(ital(by([36, 507]), 'Echo River', -12) + ital(by([461, 214]), 'Cathedral Creek', -84) + ital(by([741, 240]), 'Halloran Cr.', 0));
+  { const [x, y, a] = walk(g.lakeshore, 330), lx = X(x), ly = Y(y) - z(4.6); if (seen(lx, ly, 60)) txt.push(`<text x="${f(lx)}" y="${f(ly)}" text-anchor="middle" transform="rotate(${f(a * 180 / Math.PI)} ${f(lx)} ${f(ly)})" ${sans} font-size="${z(8.6)}" font-weight="600" letter-spacing="${z(0.6)}" fill="${ink}" stroke="${paper}" stroke-width="${z(2.6)}" stroke-linejoin="round" paint-order="stroke">Lakeshore Rd</text>`); }
+  txt.push(lab(by(LODGE, 4, 19), 'Basin Lodge', { on: waterFill }) + lab(by(FLATS, -11, 1), 'Cedar Flats', { anchor: 'end', on: waterFill, extra: ` data-s4="Cedar Flats (closed)"` }));
+  txt.push(lab(by([613, 430], 11, 4), 'Ranger station', { extra: ` data-s5="Ranger station (1 staff)"` }) + lab(by(HUT, -10, -6), 'Pass Hut', { anchor: 'end', extra: ` data-s4="Pass Hut (do not enter)"` }) + lab(by(POINT, 11, 4), 'Echo Point', { extra: ` data-s3="Echo Point (no shouting)"` }));
+  txt.push(lab(by(MEADOW, 18, 22), 'Halloran Meadows', { extra: ` data-s4="Halloran Meadows (no elk)"` }) + lab(by([458, 290]), 'Cathedral Stand'));
+  txt.push(lab(by(PASS, -9, -7), 'Echo Pass 8,560 ft', { anchor: 'end', size: 10.4 }) + lab(by([892, 150], -9, -2), 'Mt. Tolliver', { anchor: 'end' }) + lab(by([892, 150], -9, 9), '9,650 ft', { size: 9, weight: 500, anchor: 'end' }) + lab(by([705, 58], 8, -1), 'Corrie Peak') + lab(by([705, 58], 8, 10), '9,180 ft', { size: 9, weight: 500 }) + lab(by([330, 604], -8, -1), 'Low Knob', { anchor: 'end' }) + lab(by([330, 604], -8, 10), '5,940 ft', { size: 9, weight: 500, anchor: 'end' }));
+  txt.push(lab(by([604, 510]), 'Cedar Gap', { anchor: 'end', size: 9.4, weight: 500 }) + lab(by([47, 452], 11, -4), 'West Entrance', { size: 10 }) + lab(by([634, 650], -10, 4), 'South Entrance', { size: 10, anchor: 'end' }));
 
   // ---- the revisions go between the ground and the symbols, so the plotted line runs under each place it passes through
-  rev.push(from(3, crossStyle(crosses(T[5].slice(hutAt)))) + from(4, crossStyle(crosses(T[5].slice(0, hutAt + 1)) + crosses(T[4]) + crosses(T[3]) + crosses(T[2]))));
-  rev.push(from(4, plotted(0, S4)) + between(4, 4, head(S4 + 4)) + from(5, plotted(S4, S5)) + between(5, 5, head(S5 + 4)) + from(6, plotted(S5, EDGE + 0.5)));
-  rev.push(between(3, 3, lab(428, 51, 'Seasonal closure above 7,500 ft', { anchor: 'middle', size: 10.4, weight: 700, fill: redDeep })) + from(4, lab(566, 203, 'Closure extended Sept. 14', { anchor: 'middle', size: 10.4, weight: 700, fill: redDeep, extra: ` data-s5="Closed until further notice"` })));
-  rev.push(from(4, alongPath(120, 8.5, 'OBSERVED PATH')) + from(5, alongPath(424, 8.5, 'MARKS 40 FT APART')));
+  rev.push(FROM(3, crossStyle(crosses(T[5].slice(hutAt)))) + FROM(4, crossStyle(crosses(T[5].slice(0, hutAt + 1)) + crosses(T[4]) + crosses(T[3]) + crosses(T[2]))));
+  rev.push(FROM(4, plotted(0, S4)) + BETWEEN(4, 4, head(S4 + 4)) + FROM(5, plotted(S4, S5)) + BETWEEN(5, 5, head(S5 + 4)) + FROM(6, plotted(S5, EDGE + 0.5)));
+  rev.push(BETWEEN(3, 3, lab(by([428, 51]), 'Seasonal closure above 7,500 ft', { anchor: 'middle', size: 10.4, weight: 700, fill: redDeep })) + FROM(4, lab(by([566, 203]), 'Closure extended Sept. 14', { anchor: 'middle', size: 10.4, weight: 700, fill: redDeep, extra: ` data-s5="Closed until further notice"` })));
+  rev.push(FROM(4, alongPath(120, 8.5, 'OBSERVED PATH')) + FROM(5, alongPath(424, 8.5, 'MARKS 40 FT APART')));
+
+  if (!full) {
+    // A window has no legend, title or scale panel, and nothing is laid over its ground. Under its neatline, in a strip
+    // of the sheet's margin, it has a scale bar of its own (a mile, or half a mile where a mile would run long, in two
+    // halves like the sheet's) and the sheet's north arrow, with its N set beside it to keep the strip low. The bar's
+    // underside and the arrow's foot are level.
+    const mile = U_PER_MILE * v.s, half = mile > 185, bw = r2(half ? mile / 2 : mile), k = v.kt, ab = r2(v.H - v.foot + (v.foot + 21 * k) / 2), sy = r2(ab - z(4.2)), sx = v.i + z(4), ax = v.W - v.i - z(6);
+    o.push(`<g clip-path="url(#${frame})">${m.join('\n')}${top.join('\n')}${rev.join('\n')}${sym.join('\n')}${txt.join('\n')}</g>`);
+    o.push(`<path d="M${fr[0]},${fr[1]} H${fr[2]} V${fr[3]} H${fr[0]}Z" fill="none" stroke="${ink}" stroke-width="${w(1)}"/>`);
+    o.push(`<rect x="${f(sx)}" y="${f(sy)}" width="${f(bw / 2)}" height="${z(4.2)}" fill="${ink}" stroke="${ink}" stroke-width="${w(0.7)}"/><rect x="${f(sx + bw / 2)}" y="${f(sy)}" width="${f(bw / 2)}" height="${z(4.2)}" fill="${paper}" stroke="${ink}" stroke-width="${w(0.7)}"/>`
+      + `<g ${sans} font-size="${z(9.4)}" font-weight="600" fill="${ink}"><text x="${f(sx)}" y="${f(sy - z(4))}" text-anchor="middle">0</text><text x="${f(sx + bw)}" y="${f(sy - z(4))}" text-anchor="middle">${half ? '½' : '1'}</text><text x="${f(sx + bw + z(5))}" y="${f(ab)}">mi</text><text x="${f(ax - z(10))}" y="${f(ab)}" text-anchor="end" font-weight="700">N</text></g>`
+      + `<path d="M0,-13 L4.6,8 L0,4.2 L-4.6,8Z" transform="translate(${f(ax)},${f(ab - 8 * k)}) scale(${k})" fill="${ink}"/>`);
+    o.push(grain(0, 0, v.W, v.H, GR(v.W / 2, v.H / 2, Math.hypot(v.W, v.H) * 0.62, [[0, 0], [0.6, 0.05], [1, 0.3]]), '#B9A27C'));
+    return { svg: `<defs>${L.defs.join('\n')}</defs>${o.join('\n')}`, vb: [0, 0, v.W, v.H], flat: true };
+  }
 
   // ---- legend, with a second panel for the revisions once there are any
   const LX = 658, LY = 492, LW = 206;
@@ -423,4 +578,16 @@ export function map(){
   o.push(`<g fill="none" opacity="0.5"><path d="M343,0 V${H} M657,0 V${H} M0,350 H${W}" stroke="#FFFDF6" stroke-width="1.2" opacity="0.5"/><path d="M344.2,0 V${H} M658.2,0 V${H} M0,351.2 H${W}" stroke="${P.plum}" stroke-width="0.6" opacity="0.16"/></g>`);
   o.push(grain(0, 0, W, H, GR(500, 350, 720, [[0, 0], [0.6, 0.05], [1, 0.3]]), '#B9A27C'));
   return { svg: `<defs>${L.defs.join('\n')}</defs>${o.join('\n')}`, vb: [0, 0, W, H], vbm: [262, 0, 640, 700], flat: true };
+}
+
+// The park map: the whole sheet.
+export function map(){ return sheet({ full: true, x0: 0, y0: 0, s: 1 }); }
+
+// A window of the sheet for a trail page: the piece of ground inside `box` ([x0, y0, x1, y1] in sheet units) drawn W
+// wide inside a neatline `inset` in from the edge, with the strip for its scale bar and north arrow below, and trail
+// number `trail` made prominent. kw and kt are how much heavier the lines and how much larger the lettering and symbols
+// are than on the sheet; g is how much closer together the points of its curves are.
+export function sheetWindow({ trail, box: [bx0, by0, bx1, by1], W = 640, inset = 14, kw = 1.5, kt = 1.75, g = 1.4 }){
+  const s = (W - 2 * inset) / (bx1 - bx0), foot = Math.round(30 * kt), H = Math.round((by1 - by0) * s) + inset + foot, m = 18 / s;
+  return sheet({ x0: bx0 - inset / s, y0: by0 - inset / s, s, W, H, i: inset, foot, kw, kt, g, hi: trail, cut: [bx0 - m, by0 - m, bx1 + m, by0 + (H - inset - foot) / s + m] });
 }

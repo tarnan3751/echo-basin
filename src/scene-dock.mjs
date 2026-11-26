@@ -122,8 +122,9 @@ export function finale(){
   }
   // the far shore itself, and the line where it meets the water
   o.push(`<use href="#${shoreId}"/><path d="M0,${WATER + 1.2}H${W}" stroke="${P.cream}" stroke-width="1.2" opacity="0.22"/>`);
-  // the rental canoe, still out there with nobody in it
-  o.push(`<g transform="translate(420,${f(HZ + F * (EYE + DROP) / 34)}) rotate(-2) scale(0.8)">${L.canoe({ shadow: false, paddle: false, afloat: true })}</g>`);
+  // the rental canoe, still out there with nobody in it. From stage 2, when the lake picture first shows it adrift:
+  // before that it is on the bank, and this page can be the first one a visitor opens.
+  o.push(L.from(2, `<g transform="translate(420,${f(HZ + F * (EYE + DROP) / 34)}) rotate(-2) scale(0.8)">${L.canoe({ shadow: false, paddle: false, afloat: true })}</g>`));
 
   // ================= THE PIER =================
   const wood = { dark: '#1C2737', darkFar: '#141D2B', lit: '#BE8A4C', post: '#0A111B', postLit: '#8A6238' };

@@ -3,7 +3,6 @@
 // that voice and change what it is reporting. Ladder: 1 word choice only, 2 odd but deniable,
 // 3 instructions, 4 wrong, 5 hostile, 6 direct address. A stage with no alternate keeps the last one.
 export const C = {
-  thresholds: [0.12, 0.28, 0.46, 0.60, 0.74, 0.88],
   titles: [
     'Echo Basin National Park | Plan Your Visit',
     'Echo Basin National Park | Plan Your Stay',
@@ -17,11 +16,11 @@ export const C = {
   brandSub: ['National Park', { 6: '' }],
   cta: ['Plan your visit', { 1: 'Plan your stay', 3: 'Check conditions', 5: 'Do not visit', 6: "Don't turn around" }],
   nav: [
-    ['#zones', ['Explore', { 6: 'It' }]],
-    ['#trails', ['Trails', { 3: 'Trails (day use)', 6: 'is' }]],
-    ['#wildlife', ['Wildlife', { 4: 'Wildlife (none)', 6: 'behind' }]],
-    ['#safety', ['Safety', { 3: 'Alerts', 6: 'you' }]],
-    ['#stay', ['Lodging', { 5: 'Lodging (closed)', 6: 'now' }]],
+    ['explore/', ['Explore', { 6: 'It' }]],
+    ['trails/', ['Trails', { 3: 'Trails (day use)', 6: 'is' }]],
+    ['wildlife/', ['Wildlife', { 4: 'Wildlife (none)', 6: 'behind' }]],
+    ['safety/', ['Safety', { 3: 'Alerts', 6: 'you' }]],
+    ['lodging/', ['Lodging', { 5: 'Lodging (closed)', 6: 'now' }]],
   ],
   ticker: [
     ['Lakeshore Rd open. Short delays for paving near mile 4.', { 2: 'Lakeshore Rd open until dusk. Gate locks at 7:42.', 4: 'Lakeshore Rd closed past the boat launch, staff vehicles only', 5: "Lakeshore Rd: don't. It isn't a way out." }],
@@ -40,7 +39,7 @@ export const C = {
       3: "Until further notice, please don't shout, sing or whistle anywhere in the park. If you hear a voice from off the trail, even one you know, don't answer it. Walk to the nearest building and tell staff.",
       4: "Since about the 12th the echo has been coming back with the wrong words. Since the 14th it's been coming back before anybody calls. Echo Point is closed.",
       5: "We asked you not to call out. It's posted at every trailhead and it's been at the top of this page since the 13th.",
-      6: "You've been sounding these words out in your head as you read. That turned out to be enough. It's been reading along since the trail map.",
+      6: "You've been sounding these words out in your head as you read. That turned out to be enough. It's been reading along since you got here.",
     }],
     link: ['See the trail map', { 4: 'See the reprinted map', 6: 'See which way it went' }],
     cap: ['Echo Lake and Basin Lodge from the south shore, last September.', {
@@ -91,7 +90,7 @@ export const C = {
         2: "On calm mornings it's a mirror. A few guests have told us the reflection doesn't always match the shoreline. It's probably the light, but we'd like to hear about it if you see it.",
         3: "Please don't stare at the reflection. If you see something in the water that isn't on the shore, look somewhere else and tell staff when you get in.",
         4: "The thing you can see in the reflection, standing in the trees, is really there. You can't see it by looking at the trees. We've tried.",
-        5: 'You looked at the picture at the top of this page for a long time.',
+        5: 'You looked at the picture of the lake for a long time.',
       }] },
     ],
     capA: ["Cathedral Stand boardwalk. That's a full-grown adult on the trail.", { 3: 'Cathedral Stand. The pale patches are the marks. Forty feet up, every tree.', 4: 'Cathedral Stand. The pack belongs to M. Arroyo, who signed in on the 14th.', 5: "Cathedral Stand. There's something orange near the top of the picture. We haven't been able to get it down." }],
@@ -127,7 +126,7 @@ export const C = {
       3: "Echo Point is closed to shouting until further notice, so please don't test this. We've left the chart up so you know what the four real echoes sound like. If you hear a fifth, don't answer it. Walk back down to the lodge and tell the front desk.",
       4: "Echo Point is closed. On the 14th the fifth one came back 1.3 seconds before June's tour group had shouted anything. Going by the chart, that puts it behind the point on the lodge side, about 700 feet back in the trees.",
       5: "Nobody has shouted from Echo Point since the 14th, so the cliffs have nothing to send back. What people hear from up there now starts by itself. On the morning of the 15th it sounded like Tomás. By that night it sounded like June.",
-      6: "You've been reading this page in your own voice. It's been listening since the top. The red mark on the chart isn't you.",
+      6: "You've been reading these pages in your own voice. It's been listening since the first one. The red mark on the chart isn't you.",
     }],
     cap: ['Echo Point and the four cliffs, looking northwest. The lodge is half a mile downhill to the left, and Halloran Meadows is up the slope to the right.', {
       2: 'Echo Point and the four cliffs. The red mark is where a fifth cliff would have to be.',
@@ -206,7 +205,7 @@ export const C = {
       [['Seen something we missed?', { 3: 'Not listed', 6: 'You know what it is' }], ['Tell us at any ranger station. Good sightings go in the park log with your name on them.', {
         3: "There's one animal we haven't put on this page. We don't have a name for it or a photo. Please don't try to get us one.",
         4: "What we know so far: it's very tall, it copies voices, and it comes toward people who look at it.",
-        5: "You've been looking for it in every picture on this page.",
+        5: "You've been looking for it in every picture.",
         6: 'It noticed.',
       }]],
     ],
@@ -310,14 +309,14 @@ export const C = {
     body: ["The nearest town is sixty miles away, so the sky here gets properly dark. On a clear night at the pass you can see the Milky Way without even trying. Rangers set up telescopes outside the Pass Hut on Friday and Saturday nights from June through September. It's free and you don't need to book.", {
       3: "Telescopes are still out on Fridays and Saturdays. They're pointed at the sky. Please don't swing them down toward the ridge or the treeline, not even as a joke.",
       4: "On Friday the snow came off the east side of the hut roof all at once, with the group standing outside. There wasn't any wind. The two visitors who walked round to look didn't come back down with everybody else.",
-      5: "By Saturday that side of the roof was pushed in and the chimney was lying in the snow. The walls are fine. Whatever did it was standing over the hut, and it put its weight down from above.",
+      5: "By Sunday that side of the roof was pushed in and the chimney was lying in the snow. The walls are fine. Whatever did it was standing over the hut, and it put its weight down from above.",
     }],
     facts: [
       ['Star talks: Fri and Sat, 9 pm, outside Pass Hut', { 4: 'Star talks: cancelled until further notice' }],
       ['Dress warm and bring a red flashlight', { 3: 'Dress warm. No lights of any color.', 5: 'It saw the flashlights' }],
       ['Moonrise tonight: 9:14 pm', { 5: 'It stood up at 9:14 pm' }],
     ],
-    cap: ['Looking north from the Pass Hut, about 10 pm.', { 4: 'Friday night. The snow is off one side of the roof and not the other.', 5: "Same view on Saturday. The door was already open. It didn't use it." }],
+    cap: ['Looking north from the Pass Hut, about 10 pm.', { 4: 'Friday night. The snow is off one side of the roof and not the other.', 5: "Same view on Sunday. The door was already open. It didn't use it." }],
   },
   voice: {
     quote: ["We booked two nights for our anniversary and ended up staying six. I slept better than I have in years. Ask for Cabin 3 if you can get it.", {
@@ -327,7 +326,7 @@ export const C = {
       5: "It was looking at our cabin, and then it was looking at me. I think it had been waiting the whole time for one of us to look.",
       6: "It isn't looking at me anymore. I can see it from the dock. It's right behind you.",
     }],
-    who: ['Dana K., stayed in Cabin 3 last September', { 4: 'Dana K., Cabin 3, checked in Sept. 13', 5: 'Dana K., Cabin 3, not checked out' }],
+    who: ['Dana K., stayed in Cabin 3 last September', { 4: 'Dana K., Cabin 3, checked in Sept. 11', 5: 'Dana K., Cabin 3, not checked out' }],
   },
   plan: {
     h2: ['Plan your visit', { 5: 'Your visit', 6: "You're already here" }],
@@ -335,7 +334,7 @@ export const C = {
       5: "There's nobody at the entrance stations. The gate has been open since the 15th, and we didn't open it.",
       6: "Everybody on the dock can see it. That's why none of them are looking at you.",
     }],
-    typed: "You've been on this page for {m}. We should have taken it down days ago, and we're sorry. It left the park last night. Please don't turn around.",
+    typed: "You've been on this site for {m}. We should have taken it down days ago, and we're sorry. It left the park last night. Please don't turn around.",
     cta: 'Plan your visit',
     cap: ['The lodge dock at night.', { 5: 'The lodge dock, Sept. 16. The six people still at the lodge. Nobody asked them to come out.', 6: 'The lodge dock, right now.' }],
   },

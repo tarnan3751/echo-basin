@@ -47,7 +47,8 @@
       }
     }
     ctx.putImageData(im, 0, 0);
-    cv.toBlob(function (bl) { if (bl) el.setAttribute('href', URL.createObjectURL(bl)); done(); });
+    // a picture that has left the page while this was made (a page swapped for another) is not given it
+    cv.toBlob(function (bl) { if (bl && el.isConnected) el.setAttribute('href', URL.createObjectURL(bl)); done(); });
   }
   function pump() {
     if (busy) return; var el = queue.shift(); if (!el) return;
@@ -61,6 +62,13 @@
       var els = (root || document).querySelectorAll('image.gr:not([data-q])');
       for (var i = 0; i < els.length; i++) { els[i].setAttribute('data-q', '1'); queue.push(els[i]); pending++; }
       pump();
+    },
+    // Lets go of the grain under root, which is leaving the page: what is still waiting to be made for it is dropped,
+    // and the images made for it are freed, since the document they were made in stays when pages are swapped.
+    release: function (root) {
+      queue = queue.filter(function (el) { if (!root.contains(el)) return true; pending--; return false; });
+      var els = root.querySelectorAll('image.gr[href^="blob:"]');
+      for (var i = 0; i < els.length; i++) URL.revokeObjectURL(els[i].getAttribute('href'));
     },
     pending: function () { return pending; }
   };

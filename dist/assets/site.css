@@ -1,0 +1,630 @@
+@font-face{font-family:"Fraunces";src:url(fonts/fraunces.woff2) format("woff2");font-display:swap;font-weight:100 900;}
+@font-face{font-family:"Source Sans 3";src:url(fonts/sourcesans3.woff2) format("woff2");font-display:swap;font-weight:200 900;}
+@font-face{font-family:"Special Elite";src:url(fonts/specialelite.woff2) format("woff2");font-display:swap;font-weight:400;}
+:root{
+  --paper:#E7EADB; --bone:#F5F1E3; --ink:#12303B; --ink2:#44606A; --line:rgba(18,48,59,.2);
+  --sun:#F2B441; --coral:#E4694F; --teal:#2F6B68; --plum:#2A2140; --night:#0B1722; --black:#05090F;
+  --display:"Fraunces",Georgia,serif; --sans:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif; --docf:"Special Elite","Courier New",monospace;
+  --fv:"SOFT" 100,"WONK" 0,"wght" 640;
+  --pad:clamp(20px,4.4vw,64px); --gap:clamp(20px,2.4vw,36px);
+}
+/* the display face hardens and goes off-axis one stage at a time */
+body[data-stage="1"]{--fv:"SOFT" 90,"WONK" 0,"wght" 640}
+body[data-stage="2"]{--fv:"SOFT" 74,"WONK" 0,"wght" 640}
+body[data-stage="3"]{--fv:"SOFT" 54,"WONK" 0,"wght" 640}
+body[data-stage="4"]{--fv:"SOFT" 30,"WONK" 1,"wght" 640}
+body[data-stage="5"]{--fv:"SOFT" 10,"WONK" 1,"wght" 640}
+body[data-stage="6"]{--fv:"SOFT" 0,"WONK" 1,"wght" 640}
+*{box-sizing:border-box}
+/* clip on the root as well as the body, so the stage-change jolt can never make the page scroll sideways */
+html{-webkit-text-size-adjust:100%;overflow-anchor:none;overflow-x:clip}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 18px/1.55 var(--sans);overflow-x:hidden;overflow-x:clip}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--sun);outline-offset:3px;border-radius:4px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--sun);color:var(--ink);padding:10px 14px;border-radius:8px;z-index:99;font-weight:600}
+.skip:focus{left:12px}
+/* while the next page is on its way to be swapped in (bible 10.8) */
+html.going,html.going a{cursor:progress}
+h1,h2,h3{font-family:var(--display);font-weight:640;font-variation-settings:var(--fv),"opsz" 144;margin:0;letter-spacing:-.018em;line-height:1.02;text-wrap:balance}
+/* An inner page's heading is its h1 at the size it was drawn at as a section heading, so every stage's version still
+   fits where it did. Only the home page's hero heading is set larger. */
+h1,h2{font-size:clamp(34px,4.4vw,64px)}
+.hero h1{font-size:clamp(44px,7vw,108px);line-height:.95;letter-spacing:-.028em}
+h3{font-size:clamp(20px,1.65vw,24px);font-variation-settings:var(--fv),"opsz" 36;letter-spacing:-.004em;line-height:1.16}
+p{text-wrap:pretty}
+.mis{--mis:0;text-shadow:calc(var(--mis)*1px) calc(var(--mis)*.3px) 0 rgba(228,105,79,.66),calc(var(--mis)*-.55px) calc(var(--mis)*-.2px) 0 rgba(47,107,104,.42)}
+.wrap{max-width:1320px;margin-inline:auto;padding-inline:var(--pad)}
+.sec{padding-block:clamp(56px,7vw,104px)}
+.lede{font-size:clamp(18px,1.45vw,21px);line-height:1.5;margin:0;max-width:36em}
+:is(h1,h2) + .lede{margin-top:18px}
+/* the top of an inner page: its first section starts as far under the header as the home page's hero does */
+:where(main > section).sec:first-of-type{padding-top:clamp(32px,4.6vw,68px)}
+
+/* buttons and links */
+.btn{display:inline-flex;align-items:center;background:var(--sun);color:#12303B;font:650 17px/1.1 var(--sans);padding:15px 22px;border-radius:9px;text-decoration:none;border:0;box-shadow:0 3px 0 rgba(18,48,59,.92);cursor:pointer;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 0 rgba(18,48,59,.92)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(18,48,59,.92)}
+.btn--sm{padding:10px 14px;font-size:15px;box-shadow:0 2px 0 rgba(0,0,0,.5)}
+.btn--big{font-size:20px;padding:19px 28px;margin-top:22px}
+.btn.spent{background:transparent;color:var(--bone);box-shadow:none;outline:1.5px solid rgba(245,241,227,.4);pointer-events:none}
+.lnk{font-weight:600;text-underline-offset:.24em;text-decoration-thickness:1.5px}
+/* a link that leads on to another page ends in an arrow, drawn so that it has no words for a screen reader to say;
+   one that leads back (the trail before this one) starts with the same arrow turned round */
+.lnk--go::after,.lnk--back::before{content:"";display:inline-block;width:.95em;height:.7em;margin-left:.38em;vertical-align:-.02em;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 19 14'%3E%3Cpath d='M1 7h15M11 1.5 16.5 7 11 12.5' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 19 14'%3E%3Cpath d='M1 7h15M11 1.5 16.5 7 11 12.5' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  transition:transform .15s}
+.lnk--go:hover::after{transform:translateX(3px)}
+.lnk--back::before{margin:0 .38em 0 0;transform:scaleX(-1)}
+.lnk--back:hover::before{transform:scaleX(-1) translateX(3px)}
+
+/* nav and alerts */
+.top{position:sticky;top:0;z-index:50}
+.nav{display:flex;align-items:center;gap:clamp(14px,2vw,28px);background:var(--ink);color:var(--bone);padding:11px var(--pad)}
+.brand{display:flex;align-items:baseline;gap:12px;color:inherit;text-decoration:none;margin-right:auto;min-width:0}
+.brand svg{width:36px;height:36px;align-self:center;flex:none}
+.brand__name{font:640 26px/1 var(--display);font-variation-settings:var(--fv),"opsz" 40;white-space:nowrap}
+.brand__sub{font:500 16px/1 var(--sans);opacity:.72;white-space:nowrap}
+.nav__links{display:flex;gap:clamp(14px,2vw,26px)}
+.nav__links a{text-decoration:none;font-weight:500;font-size:16px;opacity:.92;white-space:nowrap}
+.nav__links a:hover{text-decoration:underline;text-underline-offset:.3em}
+/* the page you are on, and the menu entry a page sits under: a rule in the brand's sun under the link. It is drawn
+   by the link, not its words, so it stays under whichever word the menu says at stage 6. */
+.nav__links a[aria-current]{opacity:1;text-decoration:underline;text-decoration-color:var(--sun);text-decoration-thickness:2px;text-underline-offset:.42em}
+/* the bar stays on one line: the button never wraps, and what will not fit is dropped in turn. Below 1180px the
+   words "National Park" go. Below 1020px the menu moves to a row of its own under the brand and the button, the
+   words come back, and the row scrolls sideways if the later stages' longer entries do not fit; phones are handled
+   further down. */
+.nav .btn{white-space:nowrap}
+@media (min-width:1021px) and (max-width:1180px){.brand__sub{display:none}}
+@media (max-width:1020px){
+  .nav{flex-wrap:wrap;row-gap:0;padding-bottom:0}
+  .nav__links{order:9;flex:1 0 100%;gap:22px;margin:8px calc(var(--pad) * -1) 0;padding:0 var(--pad);border-top:1px solid rgba(245,241,227,.12);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .nav__links::-webkit-scrollbar{display:none}
+  .nav__links a{padding:8px 0 9px;font-size:15px}
+}
+.snd{background:none;border:1px solid rgba(245,241,227,.35);color:inherit;font:500 13px/1 var(--sans);padding:8px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.snd[aria-pressed="true"]{background:rgba(245,241,227,.14)}
+.ticker{background:#0B222C;color:var(--bone);font-size:14.5px;overflow:hidden;white-space:nowrap;border-top:1px solid rgba(245,241,227,.12)}
+.ticker__run{display:flex;width:max-content;animation:tick 70s linear infinite}
+.ticker__set{display:flex;gap:46px;padding:8px 23px;flex:none}
+.ticker__item i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sun);margin-right:9px;vertical-align:1px}
+body[data-stage="4"] .ticker__item i,body[data-stage="5"] .ticker__item i,body[data-stage="6"] .ticker__item i,
+body[data-stage="4"] .alerts__list i,body[data-stage="5"] .alerts__list i,body[data-stage="6"] .alerts__list i{background:var(--coral)}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+/* plates: every illustration sits on a coral under-plate that drifts out of register as the page decays */
+.plate{margin:0}
+.plate__frame{position:relative;--slip:0px}
+.plate__mark{position:absolute;left:0;width:1px;height:0;pointer-events:none}
+.plate__frame::before,.plate__frame::after{content:"";position:absolute;inset:0;border-radius:14px;transition:transform 1s cubic-bezier(.2,.7,.2,1)}
+.plate__frame::before{background:var(--coral);transform:translate(14px,12px)}
+.plate__frame::after{background:var(--teal);transform:translate(calc(var(--slip)*-.5),calc(var(--slip)*-.34))}
+.plate.in .plate__frame::before{transform:translate(var(--slip),calc(var(--slip)*.62))}
+.plate__img{position:relative;z-index:1;aspect-ratio:var(--ar);overflow:hidden;border-radius:14px;background:#C9B7A6;isolation:isolate}
+.ly{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;will-change:transform}
+figcaption{font-size:15px;line-height:1.4;color:var(--ink2);margin-top:14px;max-width:62ch}
+.plate--bleed .plate__img{border-radius:0}
+.plate--bleed .plate__frame::before,.plate--bleed .plate__frame::after{display:none}
+.plate--bleed figcaption{padding-inline:var(--pad);max-width:none}
+
+/* hero */
+.hero{padding-top:clamp(32px,4.6vw,68px)}
+.plate--hero{margin-inline:calc(var(--pad)*-.45)}
+.hero__head{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:var(--gap) clamp(28px,5vw,84px);align-items:end;margin-bottom:clamp(28px,3.4vw,48px)}
+.kick{font-weight:600;font-size:16px;margin:0 0 14px;color:var(--ink2)}
+.acts{display:flex;align-items:center;gap:22px;margin-top:22px;flex-wrap:wrap}
+.glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap);margin-top:clamp(32px,3.4vw,52px);padding-block:22px}
+.glance>div{border-top:1.5px solid var(--ink);padding-top:14px}
+.glance__k{margin:0 0 4px;font-size:15px;color:var(--ink2);font-weight:600}
+.glance__v{margin:0;font:560 clamp(19px,1.7vw,24px)/1.2 var(--display);font-variation-settings:var(--fv),"opsz" 30}
+
+/* zones: an elevation ladder beside two plates */
+.zones__grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(32px,6vw,96px);align-items:start}
+.ladder{list-style:none;margin:34px 0 0;padding:0;border-left:1.5px solid var(--ink)}
+.ladder li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;padding:16px 0 20px;position:relative}
+.ladder li::before{content:"";position:absolute;left:0;top:29px;width:14px;height:1.5px;background:var(--ink)}
+.ladder__alt{padding:5px 0 0 24px;font-weight:650;font-size:15px;font-variant-numeric:tabular-nums}
+.ladder p{margin:6px 0 0;font-size:17px;line-height:1.48}
+.zones__plates{display:grid;gap:clamp(30px,4vw,60px)}
+/* each landscape's name leads to its trail, and under the ladder the way to the ranger programs */
+.ladder h3 a,.tbl tbody th a{text-underline-offset:.2em;text-decoration-thickness:1.5px}
+.zones__go{margin:22px 0 0;font-size:clamp(18px,1.45vw,21px)}
+
+/* home: the teasers. The landscapes ladder in brief, with its heading and the way to Explore beside it; then Today
+   and Plan as two panels side by side, each ending in the way to its page, the panels' last lines level */
+.teaser__grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(24px,6vw,96px);align-items:start}
+.teaser__go{margin:20px 0 0;font-size:clamp(18px,1.45vw,21px)}
+.teaser .ladder{margin-top:0}
+.panels{padding-top:clamp(48px,5.6vw,84px)}
+.panels__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+.panel{display:flex;flex-direction:column;align-items:flex-start;background:#DADFCB;border-radius:14px;padding:clamp(26px,3.2vw,46px)}
+.panel h2{font-size:clamp(30px,3.3vw,52px)}
+.panel .lede{margin-top:16px}
+.panel__go{margin:auto 0 0;padding-top:26px;font-size:clamp(18px,1.45vw,21px)}
+
+/* trails, and the top of every page that opens with its heading: the heading on the left, its introduction on the
+   right, lined up on their first lines */
+.split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(24px,6vw,96px);align-items:baseline;margin-bottom:34px}
+.split .lede{margin:0}
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:17px;font-variant-numeric:tabular-nums;min-width:600px}
+.tbl th,.tbl td{text-align:left;padding:14px 18px 14px 0;border-bottom:1px solid var(--line);vertical-align:baseline}
+.tbl thead th{font-size:14.5px;font-weight:600;color:var(--ink2);border-bottom:1.5px solid var(--ink);padding-bottom:10px}
+.tbl tbody th{font:600 19px/1.2 var(--display);font-variation-settings:var(--fv),"opsz" 30}
+.tbl tbody th b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.6px solid var(--coral);color:#B4473F;font:700 13px/1 var(--sans);margin-right:12px;vertical-align:2px}
+.status{font-weight:600}
+.note{font-size:15px;color:var(--ink2);margin:14px 0 clamp(36px,5vw,64px)}
+
+/* information graphics: printed cards on the map's paper. The echo diagram runs full width under its heading. The
+   three trail cards share a row: the tall track card on the left, and the two short cards stacked on the right
+   with whatever is left over between them, so the row's two sides come out exactly the same height. */
+.plate--info .plate__img{background:#F3EAD3}
+.echo .split,.field .split{margin-bottom:clamp(28px,3.4vw,48px)}
+.tri{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:var(--gap);align-items:stretch}
+.tri__side{display:flex;flex-direction:column;justify-content:space-between}
+.tri__note{font-size:15px;line-height:1.4;color:var(--ink2);margin:28px 0 0}
+
+/* rangers: the plate runs full width so the faces are large enough to read */
+.rangers .split{margin-bottom:clamp(28px,3.4vw,48px)}
+.people{list-style:none;padding:0;margin:clamp(28px,3vw,44px) 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}
+.people li{border-top:1.5px solid var(--ink);padding-top:14px}
+.role{margin:3px 0 8px;font-size:15px;font-weight:600;color:var(--ink2)}
+.people li p:last-child{margin:0;font-size:17px;line-height:1.48}
+
+/* wildlife */
+.sec.wildlife{padding-top:0}
+.wildlife__grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:clamp(28px,6vw,96px);margin-top:clamp(40px,5vw,72px)}
+.species{margin:0;display:grid}
+.species>div{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr);gap:20px;padding:15px 0;border-top:1px solid var(--line)}
+.species dt{font:600 20px/1.2 var(--display);font-variation-settings:var(--fv),"opsz" 30}
+.species dd{margin:0;font-size:17px;line-height:1.48}
+
+/* safety and the found documents */
+.safety{background:#DADFCB}
+/* Until the memo exists (stage 3) the register stands beside the rules. Once it does, the memo takes the right-hand
+   column the full height of both and the register goes under the rules, as it was on the long page. */
+.safety__grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);grid-template-areas:"rules reg";gap:0 clamp(32px,5vw,72px);margin-top:38px;align-items:start}
+.safety__grid .rules{grid-area:rules}
+.safety__grid .doc--reg{grid-area:reg;margin:6px 4% 0 0}
+.safety__grid .doc--memo{grid-area:memo;margin-top:4px}
+.safety__grid:has(> .doc--memo:not([style*="none"])){grid-template-areas:"rules memo" "reg memo";grid-template-rows:auto 1fr}
+.safety__grid:has(> .doc--memo:not([style*="none"])) .doc--reg{margin:44px 6% 0 0}
+.rules{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 32px}
+.rules li{border-top:1.5px solid var(--ink);padding-top:14px}
+.rules p{margin:8px 0 0;font-size:17px;line-height:1.48}
+.doc{background:#F3EDDC;color:#2A2533;font:400 15px/1.52 var(--docf);padding:26px 26px 28px;box-shadow:0 1px 0 rgba(0,0,0,.08),0 18px 34px -20px rgba(18,48,59,.55);position:relative}
+.doc--memo{transform:rotate(-1.1deg)}
+.doc--reg{transform:rotate(.9deg)}
+.doc__head{margin:0 0 10px;border-bottom:1px solid #2A2533;padding:0 74px 8px 0}
+.doc__meta{margin:0 0 12px}
+.doc ol{margin:0;padding-left:24px}
+.doc li{margin-bottom:8px}
+.rd{background:#1C1826;color:transparent;transition:background .9s,color .9s;-webkit-box-decoration-break:clone;box-decoration-break:clone;-webkit-user-select:none;user-select:none}
+.rd.lift{background:rgba(228,105,79,.2);color:inherit;-webkit-user-select:auto;user-select:auto}
+.doc__hand{font:500 17px/1.35 var(--display);font-style:italic;color:#B4473F;transform:rotate(-1.6deg);margin:16px 0 0}
+.stamp{position:absolute;right:18px;top:14px;border:2px solid #B4473F;color:#B4473F;padding:3px 9px 1px;font-size:13px;transform:rotate(7deg);opacity:.85}
+.doc table{width:100%;border-collapse:collapse;font-size:13.5px}
+.doc td,.doc th{text-align:left;padding:5px 8px 5px 0;border-bottom:1px dashed rgba(42,37,51,.4);font-weight:400}
+#you-row td{color:#B4473F}
+/* words for a screen reader alone */
+.vh{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+
+/* Handwriting on the newer documents is the memo's hand (.doc__hand) in other inks: blue-black ink, and the pencil
+   June added her fifth column in, softer and greyer than the ink. The register's red is kept for the reader. */
+.doc,.board{--pen:#26386B;--lead:#7A7680;--you:#B4473F}
+.hand{font:500 17px/1.2 var(--display);font-style:italic;color:var(--pen)}
+.hand.pencil,.pencil .hand,.doc .pencil{color:var(--lead);font-weight:400;text-shadow:0 0 .7px rgba(122,118,128,.6)}
+.docfig{margin:0}
+.docfig figcaption{margin-top:18px}
+
+/* June's stopwatch sheet: a printed form with ruled columns, filled in row by row in ink, with her notes down the
+   margin. The paper has as many ruled lines at every stage; wide tables scroll inside the paper on a phone. */
+.sheetfig{margin-top:clamp(48px,5.4vw,80px);max-width:1080px}
+.doc--sheet{background:#F5F0E1;transform:rotate(-.6deg);display:grid;grid-template-columns:minmax(0,1fr) 196px;gap:0 26px;padding:28px 28px 26px 30px}
+.sheet__head{margin:0;font-size:19px;letter-spacing:.02em}
+.sheet__sub{margin:3px 0 16px;font-size:13.5px;color:#5C5566}
+.sheet__scroll{overflow-x:auto;padding-bottom:4px}
+.doc .sheet__tbl{width:100%;min-width:740px;table-layout:fixed;border-collapse:collapse;border:1.5px solid #2A2533}
+.sheet__tbl .c-date{width:52px}.sheet__tbl .c-time{width:82px}.sheet__tbl .c-cliff{width:80px}.sheet__tbl .c-fifth{width:118px}
+.doc .sheet__tbl th{font:400 11.5px/1.15 var(--docf);vertical-align:bottom;padding:7px 6px 6px;border:1px solid rgba(42,37,51,.5);border-bottom:1.5px solid #2A2533;color:#2A2533}
+.doc .sheet__tbl th.pencil{font:400 16px/1.1 var(--display);font-style:italic}
+.doc .sheet__tbl td{height:31px;padding:4px 6px 2px;border:0;border-left:1px solid rgba(42,37,51,.42);border-bottom:1px solid rgba(42,37,51,.26);vertical-align:bottom;font:500 16px/1.08 var(--display);font-style:italic;color:var(--pen)}
+.doc .sheet__tbl td:first-child{border-left:0}
+.doc .sheet__tbl .pencil{font-weight:400;color:var(--lead)}
+.doc .sheet__you td:not(.pencil){color:var(--you)}
+/* the line from the 14th: one entry, and the pencil running off after it */
+.sheet__off{display:inline-block;width:52px;height:16px;margin-left:3px;vertical-align:-9px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 16'%3E%3Cpath d='M1,4 C12,3 20,5 27,8 S41,14 51,15' fill='none' stroke='%237A7680' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat}
+.sheet__notes{list-style:none;margin:0;padding:46px 0 0;display:flex;flex-direction:column;gap:18px}
+.sheet__notes li{font-size:15.5px;line-height:1.22;transform:rotate(-1.6deg)}
+.sheet__notes li:nth-child(2n){transform:rotate(1.3deg);margin-left:8px}
+.sheet__notes li:nth-child(3n){transform:rotate(-.6deg)}
+.tally{display:block;margin-top:5px;color:inherit;overflow:visible}
+
+/* The fall count sheet: the park's survey form, a ruled table printed in type, its figures and notes written in by
+   hand, with the elk line set apart under the totals. A row is struck through by hand with one ruled line. */
+.countfig{grid-column:2}
+.doc--count{background:#F5F0E1;transform:rotate(.7deg);padding:26px 28px 24px}
+.count__head{margin:0;font-size:19px;letter-spacing:.02em}
+.count__sub{margin:3px 0 16px;font-size:13.5px;color:#5C5566}
+.count__scroll{overflow-x:auto;padding-bottom:4px}
+.doc .count__tbl{width:100%;min-width:480px;border-collapse:collapse;font-size:13.5px}
+.doc .count__tbl th,.doc .count__tbl td{position:relative;border:1px solid rgba(42,37,51,.5);padding:7px 8px 5px;vertical-align:bottom}
+.doc .count__tbl thead th{font-size:12px;border-bottom:1.5px solid #2A2533;white-space:nowrap}
+.doc .count__tbl tbody th{width:38%}
+.doc .count__tbl td{font:500 18px/1.1 var(--display);font-style:italic;color:var(--pen);text-align:center;width:13%}
+.doc .count__tbl td.count__note{text-align:left;font-size:16px;width:auto}
+.doc .count__total th,.doc .count__total td{border-top:3px double #2A2533}
+.doc .count__tbl .count__gap td{height:14px;padding:0;border-left-style:hidden;border-right-style:hidden}
+.doc .count__tbl .strike{position:absolute;left:0;right:0;bottom:11px;height:1.7px;background:var(--pen);border-radius:1px;pointer-events:none}
+.doc .count__tbl th .strike{left:-6px}
+.doc .count__tbl .count__note .strike{right:-9px}
+.count__notes{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 30px}
+.count__notes li{font-size:16px;transform:rotate(-1.4deg)}
+.count__notes li:nth-child(2n){transform:rotate(1.1deg)}
+
+/* The vehicle pass: a printed card to hang from a rearview mirror, with the hanger cut out of its top (a hole, and a
+   slot up to the edge). The cut-out is a mask, so the page shows through it; the shadow is drawn around the masked
+   card. Its fields are ruled for writing in, it is overprinted SAMPLE, and from stage 2 it carries a rubber stamp. */
+.pass{display:flex;justify-content:center;padding:26px 0 10px}
+.pass__card{width:min(100%,270px);transform:rotate(-2.4deg);filter:drop-shadow(0 1px 0 rgba(0,0,0,.1)) drop-shadow(0 14px 14px rgba(18,48,59,.28))}
+.pass__paper{position:relative;overflow:hidden;background:#F3EAD3;color:#2A2438;border-radius:14px 14px 9px 9px;padding:56px 20px 18px;font:400 13px/1.38 var(--sans);
+  -webkit-mask-image:radial-gradient(circle at 50% 26px,transparent 11px,#000 11.6px),linear-gradient(90deg,#000 calc(50% - 3px),transparent 0 calc(50% + 3px),#000 0),linear-gradient(#000,#000);
+  -webkit-mask-size:100% 100%,100% 26px,100% 100%;-webkit-mask-position:0 0,0 0,0 26px;-webkit-mask-repeat:no-repeat;-webkit-mask-composite:source-in,source-over;
+  mask-image:radial-gradient(circle at 50% 26px,transparent 11px,#000 11.6px),linear-gradient(90deg,#000 calc(50% - 3px),transparent 0 calc(50% + 3px),#000 0),linear-gradient(#000,#000);
+  mask-size:100% 100%,100% 26px,100% 100%;mask-position:0 0,0 0,0 26px;mask-repeat:no-repeat;mask-composite:intersect,add}
+.pass__band{display:flex;align-items:center;gap:9px;margin:0 -20px;padding:9px 20px;background:#12303B;color:#F5F1E3;font:650 13px/1.15 var(--sans);letter-spacing:.02em}
+.pass__mark{width:26px;height:26px;flex:none}
+.pass__title{margin:14px 0 0;font:600 21px/1.1 var(--display);font-variation-settings:var(--fv),"opsz" 30}
+.pass__price{margin:4px 0 12px;font:640 54px/1 var(--display);font-variation-settings:var(--fv),"opsz" 72;letter-spacing:-.02em}
+.pass__lines{list-style:none;margin:0;padding:10px 0 0;border-top:1px solid rgba(42,36,56,.4);font-size:12.5px;line-height:1.35}
+.pass__lines li+li{margin-top:4px}
+.pass__fields{margin:14px 0 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 16px}
+.pass__fields div:last-child{grid-column:1/-1}
+.pass__fields dt{font:600 11px/1 var(--sans);letter-spacing:.05em;color:#625B6E}
+.pass__fields dd{margin:3px 0 0;height:27px;border-bottom:1px solid #2A2438;font-size:19px;line-height:27px;padding-left:2px;white-space:nowrap}
+.pass__small{margin:14px 0 0;font-size:10.5px;line-height:1.35;color:#625B6E}
+.pass__sample{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%) rotate(-31deg);font:800 56px/1 var(--sans);letter-spacing:.12em;color:rgba(200,72,58,.12);-webkit-text-stroke:1.6px rgba(200,72,58,.5);white-space:nowrap;pointer-events:none}
+.pass__stamp{position:absolute;left:57%;top:84%;transform:translate(-50%,-50%) rotate(-8deg);border:2.5px solid currentColor;border-radius:4px;padding:6px 10px 4px;font:400 17px/1 var(--docf);letter-spacing:.05em;color:#5B3F95;opacity:.9;-webkit-text-stroke:.4px currentColor;mix-blend-mode:multiply;white-space:nowrap;pointer-events:none}
+.pass__sample:empty,.pass__stamp:empty{display:none}
+
+/* The tag board on the Lost and found page: a cork board in a wooden frame, with paper tags hung from pins by loops
+   of string. The tags sit in rows from the middle out, each at its own small angle and drop, and the board keeps a
+   height of its own, so it looks right with ten tags, with three and with one. */
+.lost__intro:empty,.lost__claim:empty{display:none}
+.lost__claim{margin:14px 0 0;font-size:17px;line-height:1.48;max-width:36em}
+.board__box{position:relative;margin-top:clamp(20px,2.6vw,36px)}
+.board__mark,.log__mark{position:absolute;left:0;width:1px;height:0;pointer-events:none}
+.board__mark{top:50%}
+.board{--pin0:#C9473A;--pin1:#F2B441;--pin2:#2F6B68;--pin3:#EDE7D8;list-style:none;margin:0;min-height:clamp(320px,34vw,440px);
+  padding:clamp(22px,2.6vw,34px) clamp(12px,2.4vw,34px) clamp(34px,4vw,52px);display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:22px clamp(14px,2.2vw,30px);
+  background-color:#B98F5F;
+  background-image:radial-gradient(circle,rgba(88,55,26,.36) .7px,transparent 1.3px),radial-gradient(circle,rgba(255,236,204,.32) .8px,transparent 1.4px),radial-gradient(circle,rgba(74,44,20,.3) 1.1px,transparent 1.9px),radial-gradient(circle,rgba(46,26,12,.55) 1.3px,transparent 2.1px);
+  background-size:6px 7px,9px 8px,13px 11px,113px 97px;background-position:0 0,3px 4px,7px 2px,41px 23px;
+  border:clamp(10px,1.2vw,15px) solid #6B4A30;border-radius:5px;
+  box-shadow:inset 0 0 0 1px rgba(30,16,6,.35),inset 0 8px 22px rgba(40,22,10,.32),0 1px 0 rgba(0,0,0,.08),0 18px 34px -20px rgba(18,48,59,.55)}
+.tag{position:relative;width:clamp(150px,15vw,186px);padding-top:22px;margin-top:var(--d)}
+.tag__pin{position:absolute;left:50%;top:4px;width:15px;height:15px;margin-left:-7.5px;border-radius:50%;
+  background:radial-gradient(circle at 35% 32%,rgba(255,255,255,.75),transparent 40%),var(--pin);box-shadow:0 2px 2px rgba(30,15,5,.45),inset 0 -2px 3px rgba(0,0,0,.25)}
+.tag__hang{position:relative;transform:rotate(var(--r));transform-origin:50% -10.5px;filter:drop-shadow(0 4px 3px rgba(40,22,10,.35))}
+.tag__hang::before{content:"";position:absolute;z-index:1;left:50%;top:-12px;width:14px;height:29px;margin-left:-7px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 29'%3E%3Cpath d='M7,1.5 C2.5,9 3,20 7,27.5 M7,1.5 C11.5,9 11,20 7,27.5' fill='none' stroke='%23EFE6D0' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat}
+.tag__paper{position:relative;background:#E8D3A0;color:#2A2533;padding:30px 14px 14px;font:400 14px/1.33 var(--docf);
+  clip-path:polygon(18px 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%,0 18px)}
+.tag:nth-child(3n+2) .tag__paper{background:#EFE9DA}
+.tag__paper::before{content:"";position:absolute;left:50%;top:9px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#7A5634;box-shadow:0 0 0 3.5px rgba(200,170,110,.9),inset 0 1px 2px rgba(0,0,0,.55)}
+.tag__item{margin:0;font-size:14.5px}
+.tag__where{margin:6px 0 0;font-size:12.5px;color:#5A5262}
+.tag__date{display:inline-block;margin:9px 0 0;padding:2px 6px 1px;border:1.5px solid currentColor;border-radius:3px;color:#5B3F95;font-size:11.5px;letter-spacing:.04em;transform:rotate(-2deg);opacity:.88}
+.tag__pen{margin:8px 0 0;font-size:16.5px;line-height:1.15}
+.tag__pen:empty{display:none}
+.board__note{margin:16px 0 0}
+
+/* the Conditions page: the alerts, the same six items as the ticker, and the log of updates */
+.sec.alerts{padding-top:0}
+.alerts .split,.log .split{margin-bottom:clamp(24px,2.8vw,40px)}
+.alerts__list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 var(--gap)}
+.alerts__list li{display:grid;grid-template-columns:18px minmax(0,1fr);border-top:1.5px solid var(--ink);padding:14px 0 24px;font-weight:600;font-size:17px;line-height:1.42}
+.alerts__list i{width:8px;height:8px;border-radius:50%;background:var(--sun);margin-top:.52em}
+.log{background:#DADFCB}
+.log__body{position:relative;max-width:1000px}
+.log__mark{top:33.3%}
+.log__list{list-style:none;margin:0;padding:0}
+.log__list li{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:20px;padding:14px 0;border-top:1px solid var(--line)}
+.log__date{font-weight:650;font-size:15px;color:var(--ink2);font-variant-numeric:tabular-nums;padding-top:2px}
+.log__list p{margin:0;font-size:17px;line-height:1.48}
+
+/* the Programs page: the table of programs, its notes in a quieter column */
+.progs{margin-top:0}
+.tbl--progs td{font-size:17px}
+.tbl--progs .progs__note{width:40%;color:var(--ink2);font-size:16px;line-height:1.45}
+.programs .note{margin-bottom:0}
+
+/* the Plan page: its heading, then each part with its heading beside it (the fees with the pass under theirs) */
+.visit h1{margin-bottom:clamp(22px,3vw,44px)}
+.info{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);grid-template-areas:"head body";align-items:start;gap:16px clamp(24px,6vw,96px);padding:clamp(26px,3vw,44px) 0 clamp(36px,4vw,60px);border-top:1.5px solid var(--ink);scroll-margin-top:104px}
+.info>h2{grid-area:head;font-size:clamp(28px,3vw,44px)}
+.info__body{grid-area:body}
+.info--fees{grid-template-areas:"head body" "pass body";grid-template-rows:auto 1fr}
+.info .pass{grid-area:pass}
+.info .note{margin:18px 0 0}
+.info .opts{margin-top:20px}
+.info .opts h3+p{margin-top:6px}
+.hours{margin:22px 0 0}
+.hours>div{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:20px;padding:13px 0;border-top:1px solid var(--line)}
+.hours dt{font:600 19px/1.25 var(--display);font-variation-settings:var(--fv),"opsz" 30}
+.hours dd{margin:0;font-size:17px;line-height:1.48}
+.info__list{list-style:none;margin:0;padding:0}
+.info__list li,.faq__item{border-top:1px solid var(--line);padding:14px 0}
+.info__list li{font-size:17px;line-height:1.48}
+.info__list li:first-child,.faq__item:first-child{border-top:0;padding-top:4px}
+.faq__item p{margin:6px 0 0;font-size:17px;line-height:1.48}
+
+/* the Lodging page: the Cedar Flats site plan under the list, at the width it was drawn for */
+.stay__plan{margin-top:clamp(40px,5vw,72px)}
+.plate--siteplan{max-width:900px;margin-left:auto}
+
+/* The trail pages (src/trail.mjs): one layout for all five. Under the heading and intro, the left-hand column holds
+   the hiker's card and the map window, and the right-hand one the walk and the two lists, so the reading runs straight
+   on from the intro. The card is a panel in the home page's panel tone, with the status on a band in the header's ink
+   across its top, the first thing to read, its dot turning coral at stage 4 as the ticker's do. The trail's number
+   is the park map's coral ring, as in the trail table. The page's own picture runs under both columns, no wider than
+   it was drawn (--w), and the way on to the trails either side closes the page. The Echo Point page has no walk: its
+   card and map stand side by side, and its echo section follows. */
+.trail__no{display:inline-grid;place-items:center;width:2.2em;height:2.2em;margin-right:.85em;vertical-align:.5em;border-radius:50%;border:.12em solid var(--coral);color:#B4473F;font:700 .3em/1 var(--sans);letter-spacing:0}
+.trail__grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(36px,4vw,56px) clamp(24px,6vw,96px);align-items:start}
+.trail__side{display:grid;gap:clamp(36px,4vw,56px)}
+.trail__grid--short .trail__side{display:contents}
+.trail__card{--in:clamp(20px,2.2vw,30px);margin:0;background:#DADFCB;border-radius:14px;overflow:hidden;padding:0 var(--in) 8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:18px}
+.trail__card dt{font-size:14.5px;font-weight:600;color:var(--ink2)}
+.trail__card dd{margin:0;text-wrap:pretty}
+.trail__status{grid-column:1/-1;margin:0 calc(var(--in) * -1) 4px;padding:16px var(--in) 18px;background:var(--ink);color:var(--bone)}
+.trail__status dt{color:rgba(245,241,227,.72)}
+.trail__status dd{margin-top:5px;font:600 clamp(24px,2.2vw,30px)/1.15 var(--display);font-variation-settings:var(--fv),"opsz" 40;text-wrap:balance}
+.trail__status dd::before{content:"";display:inline-block;width:.34em;height:.34em;border-radius:50%;background:var(--sun);margin-right:.4em;vertical-align:.12em}
+body[data-stage="4"] .trail__status dd::before,body[data-stage="5"] .trail__status dd::before,body[data-stage="6"] .trail__status dd::before{background:var(--coral)}
+.trail__num{padding:14px 0 12px}
+.trail__num dd{margin-top:2px;font:560 clamp(20px,1.7vw,24px)/1.2 var(--display);font-variation-settings:var(--fv),"opsz" 30;font-variant-numeric:tabular-nums;white-space:nowrap}
+.trail__fact{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,76px) minmax(0,1fr);gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.trail__fact dt{padding-top:1px}
+.trail__fact dd{font-size:16.5px;line-height:1.45}
+.trail__map .plate{max-width:640px}
+.trail__walk p{margin:0;max-width:36em}
+.trail__walk p+p{margin-top:.9em}
+.trail__look,.trail__know{margin-top:clamp(40px,4.4vw,64px)}
+.trail__main h2{font-size:clamp(28px,3vw,44px)}
+.trail__look dl,.trail__know ul{margin:18px 0 0;padding:0;list-style:none}
+.trail__look dl>div,.trail__know li{padding:14px 0;border-top:1px solid var(--line)}
+.trail__look dt{font:600 20px/1.2 var(--display);font-variation-settings:var(--fv),"opsz" 30}
+.trail__look dd{margin:6px 0 0;text-wrap:pretty}
+.trail__look dd,.trail__know li{font-size:17px;line-height:1.48}
+/* a piece of the copy that is empty at a stage is not shown at it */
+.trail :is(p,dd,li).t:empty{display:none}
+.trail__pic{margin-top:clamp(56px,6vw,96px)}
+.trail__pic .plate{max-width:var(--w,none);margin-inline:auto}
+.trail .echo{margin-top:clamp(56px,6vw,96px)}
+/* the echo section's heading is the size of the other trail pages' section headings: the page's name is above it */
+.trail .echo h2{font-size:clamp(28px,3vw,44px)}
+.onward{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px 28px;align-items:baseline;margin-top:clamp(56px,6vw,96px);padding-top:clamp(18px,2vw,26px);border-top:1.5px solid var(--ink);font-size:clamp(18px,1.45vw,21px)}
+.onward>:last-child{justify-self:end;text-align:right}
+
+/* the "not found" page: the words beside the sign */
+.lost404__grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,5vw,80px);align-items:center}
+.lost404__go{margin:22px 0 0;font-size:clamp(18px,1.45vw,21px)}
+/* The two short pages, this and the credits, are shorter than a tall window: the content takes the room left over,
+   so the footer still lies along the bottom of the window. */
+body:has(> main .lost404,> main .credits){display:flex;flex-direction:column;min-height:100vh;min-height:100svh}
+body:has(> main .lost404,> main .credits)>main{flex:1 0 auto}
+
+/* Site credits: outside the story, so its own type does not harden with the stage */
+.credits__text>*{max-width:36em}
+.credits h1,.credits h2{font-variation-settings:"SOFT" 100,"WONK" 0,"wght" 640,"opsz" 144}
+.credits p{margin:18px 0 0}
+.credits h2{font-size:clamp(24px,2.2vw,32px);margin-top:40px}
+.credits ul{margin:12px 0 0;padding-left:1.2em}
+
+/* late sections: dusk, then night */
+.dusk,.dark{--ink2:rgba(245,241,227,.7);--line:rgba(245,241,227,.22);--ink:#F5F1E3;color:var(--bone);position:relative;isolation:isolate;overflow:hidden;overflow:clip}
+.dusk{background:var(--plum)}
+.dark{background:var(--night)}
+.dusk .btn,.dark .btn{box-shadow:0 3px 0 rgba(0,0,0,.6)}
+.dusk h3,.dark h3{font-variation-settings:var(--fv),"opsz" 22}
+.stay__grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(32px,5vw,80px);align-items:start}
+.opts{list-style:none;padding:0;margin:26px 0 0}
+.opts li{border-top:1px solid var(--line);padding:15px 0}
+.opts__h{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.opts__h span{font-weight:600;font-size:15px;white-space:nowrap;color:var(--ink2)}
+.opts p{margin:6px 0 0;font-size:17px;line-height:1.48}
+.night__grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(24px,6vw,96px);margin-top:clamp(36px,4vw,60px)}
+.facts{list-style:none;padding:0;margin:22px 0 0}
+.facts li{border-top:1px solid var(--line);padding:11px 0;font-weight:600;font-size:16px}
+/* the guest's testimonial: a band in the brand's deep teal between the landscapes and the trails */
+.voice{background:#12303B;padding-block:clamp(48px,5.6vw,84px)}
+.voice__grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:clamp(32px,6vw,96px);align-items:center}
+.quote{margin:0}
+.quote blockquote{margin:0}
+.quote p{font:500 clamp(26px,3.1vw,46px)/1.16 var(--display);font-variation-settings:var(--fv),"opsz" 100;margin:0;letter-spacing:-.012em}
+.quote figcaption{margin-top:22px;font-weight:600;font-size:16px}
+/* The closing screen. The pier fills it, bottom edge to bottom edge, at the full width of the window; the picture
+   is drawn with spare sky above it, so a tall window just shows more sky. The people stand in the middle third of
+   the picture, so the copy goes in a column either side of them and never across them, however short the window
+   is. The footer lies along the bottom over the near boards, with a shade under it to keep it readable. */
+.plan{background:#070D18;padding:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto;min-height:calc(100vh - 97px);min-height:calc(100svh - 97px)}
+.plan__text{display:grid;grid-template-columns:minmax(0,1fr) 32vw minmax(0,1fr);gap:0;padding-top:clamp(28px,4vw,56px);width:100%;max-width:none;padding-inline:clamp(20px,5vw,96px);text-shadow:0 0 16px rgba(7,13,24,.9),0 0 3px rgba(7,13,24,.7)}
+.plan__text>div:first-child{max-width:30em}
+.plan__text h2{font-size:clamp(30px,3.3vw,52px)}
+.plan__end{grid-column:3;max-width:27em}
+.plan__end .btn{text-shadow:none}
+.plan__cap{font-size:15px;color:var(--ink2);margin:16px 0 0}
+.plan .plate{position:absolute;inset:0;z-index:-1}
+.plan .plate__frame,.plan .plate__img{height:100%}
+.plan .plate__img{aspect-ratio:auto;background:#070D18}
+.typed{font:500 clamp(21px,2vw,30px)/1.25 var(--display);font-variation-settings:var(--fv),"opsz" 80;margin:0;display:none}
+.typed.on{display:block}
+.typed span::after{content:"";display:inline-block;width:.46ch;height:.95em;background:var(--sun);vertical-align:-.1em;margin-left:3px;animation:blink 1s steps(2) infinite}
+.typed.done span::after{display:none}
+@keyframes blink{50%{opacity:0}}
+/* late backgrounds breathe */
+.night::before{content:"";position:absolute;inset:-10% 0;z-index:-1;background:radial-gradient(58% 46% at 50% 38%,rgba(47,107,104,.26),transparent 72%);animation:breathe 9s ease-in-out infinite}
+/* the shadow on the last screen is its own layer. When it comes it rises up the boards from the bottom edge, once;
+   after that it creeps a little and never quite settles */
+.ly.creep{transform-origin:50% 100%;animation:creep 11s ease-in-out infinite alternate}
+.ly.creep [data-from]{transform-box:view-box;transform-origin:50% 100%;animation:rise 3.2s cubic-bezier(.16,.7,.2,1) both}
+@keyframes creep{from{transform:translateY(1.6%) scaleY(.96)}to{transform:none}}
+@keyframes rise{from{transform:translateY(7%) scaleY(.14);opacity:0}30%{opacity:1}to{transform:none;opacity:1}}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.45}50%{transform:scale(1.16);opacity:1}}
+
+/* footer: a quiet band along the bottom edge of the closing screen, and under it a quieter row of links to the pages
+   the menu does not carry */
+.foot{grid-row:3;padding:54px 0 18px;font-size:14px;line-height:1.4;background:linear-gradient(to top,rgba(2,4,9,.92),rgba(2,4,9,.74) 42%,rgba(2,4,9,0))}
+.foot__grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,4fr) minmax(0,5fr);gap:var(--gap);align-items:baseline}
+.foot p{margin:0}
+.foot a{text-decoration:none}
+.foot a:hover{text-decoration:underline;text-underline-offset:.25em}
+.foot__grid p:first-child span{display:inline-block}
+.foot__visit a{display:inline-block;margin-right:1.4em;white-space:nowrap}
+.foot__grid p:last-child{text-align:right}
+.foot__grid p:last-child span{margin:0 0 0 1.4em;display:inline-block}
+.foot__brand{font:640 17px/1 var(--display);font-variation-settings:var(--fv),"opsz" 30;margin-right:.5em}
+.foot__more{display:flex;flex-wrap:wrap;gap:2px 1.7em;margin-top:16px;padding-top:12px;font-size:13px;position:relative}
+.foot__more::before{content:"";position:absolute;top:0;left:var(--pad);right:var(--pad);border-top:1px solid rgba(245,241,227,.13)}
+.foot__more a{color:rgba(245,241,227,.66)}
+.foot__more a:hover,.foot__more a[aria-current]{color:var(--bone)}
+/* On a page that does not end in a closing screen the footer follows the content on its own: a band in the night
+   tone of the closing screens, with a hairline where it meets a page that is dark already. */
+main + .foot{--ink2:rgba(245,241,227,.7);--line:rgba(245,241,227,.22);--ink:#F5F1E3;color:var(--bone);background:var(--night);border-top:1px solid rgba(245,241,227,.1);padding:34px 0 24px}
+
+/* decay layers: all four are fixed and composited, so scrolling never repaints the page */
+#cast,#tint,#flash,#paper,#grit{position:fixed;inset:0;pointer-events:none}
+#cast{z-index:60}
+#cast,#tint{display:none}
+#tint{z-index:61;background:#232450;mix-blend-mode:multiply;opacity:0}
+#flash{z-index:62;background:var(--coral);mix-blend-mode:multiply;opacity:0}
+#flash.go{animation:flash .55s ease-out}
+#paper,#grit{z-index:63;display:none;opacity:0}
+#grit{background-size:256px 256px}
+@keyframes flash{0%{opacity:.22}100%{opacity:0}}
+#main.slip{animation:slip .36s steps(5,end)}
+@keyframes slip{0%{transform:translate(6px,-3px)}30%{transform:translate(-4px,2px)}60%{transform:translate(2px,1px)}100%{transform:none}}
+
+@media (max-width:1100px){
+  /* the three cards, one under another, at a width their lettering was drawn for */
+  .tri{grid-template-columns:minmax(0,1fr);row-gap:var(--gap);max-width:600px;margin-inline:auto}
+  .tri__side{gap:var(--gap)}
+  /* June's notes go under the table, across the foot of the sheet */
+  .doc--sheet{grid-template-columns:minmax(0,1fr)}
+  .sheet__notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px 28px;padding-top:20px}
+  .alerts__list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* The two trail pictures that have to be read at the width they were drawn: below their own narrow width (given to
+   plate() in their page) they are shown in their phone layout, turned to run down the screen, at about a phone's
+   width. The elevation profile below 1100 pixels, Sam's survey sheet below 1020, where the column is narrower than
+   its 900. */
+@media (max-width:1100px){
+  .trail__pic .plate--profile{max-width:420px}
+  .plate--profile .plate__img{aspect-ratio:var(--arm)}
+}
+@media (max-width:1020px){
+  .trail__pic .plate--survey{max-width:420px}
+  .plate--survey .plate__img{aspect-ratio:var(--arm)}
+}
+/* the header takes two rows from here down, so a part of the Plan page that a link lands on stops under both */
+@media (max-width:1020px){.info{scroll-margin-top:140px}}
+@media (max-width:900px){
+  .plate--echo{max-width:520px;margin-inline:auto}
+  .plate--echo .plate__img{aspect-ratio:var(--arm)}
+  .hero__head,.zones__grid,.split,.teaser__grid,.panels__grid,.wildlife__grid,.safety__grid,.stay__grid,.night__grid,.voice__grid,.plan__text,.trail__grid{grid-template-columns:minmax(0,1fr)}
+  .plan__end{grid-column:auto}
+  .glance,.people{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* the last screen, stacked: the heading, then the picture, then its caption and the last words, then the footer */
+  .plan{min-height:0;grid-template-rows:none}
+  .plan__text{display:contents;text-shadow:none}
+  .plan__text>div{padding-inline:var(--pad)}
+  .plan__text>div:first-child{order:1;max-width:none;padding-block:clamp(28px,6vw,48px) 26px}
+  .plan .plate{order:2;position:static;z-index:auto}
+  .plan .plate__frame{height:auto}
+  .plan .plate__img{aspect-ratio:16/9;height:auto}
+  .plan__end{order:3;grid-column:auto;max-width:none;display:flex;flex-direction:column;align-items:flex-start;padding-block:4px 34px}
+  .plan__end .plan__cap{order:-1;margin:12px 0 22px}
+  .foot{order:4;grid-row:auto;background:none;border-top:1px solid rgba(245,241,227,.1);padding:28px 0 22px}
+  .foot__grid{grid-template-columns:minmax(0,1fr);gap:10px}
+  .foot__grid p:first-child span{display:block}
+  .foot__grid p:last-child{text-align:left}
+  .foot__grid p:last-child span{display:block;margin:0}
+  /* one to a line, tall enough to tap */
+  .foot__visit a{display:block;margin:0;padding:6px 0;white-space:normal}
+  .foot__more{gap:0 1.6em}
+  .foot__more a{padding:8px 0}
+  .safety__grid,.safety__grid:has(> .doc--memo:not([style*="none"])){grid-template-areas:"rules" "reg" "memo";grid-template-rows:none}
+  .safety__grid .doc--reg,.safety__grid:has(> .doc--memo:not([style*="none"])) .doc--reg{margin:44px 0 0}
+  .safety__grid .doc--memo{margin-top:44px}
+  .voice__grid .plate{max-width:420px}
+  .lost404__grid,.info{grid-template-columns:minmax(0,1fr)}
+  .info{grid-template-areas:"head" "body"}
+  .info--fees{grid-template-areas:"head" "body" "pass";grid-template-rows:none}
+  .countfig{grid-column:auto}
+  /* the site plan in its phone layout, turned to run down the screen, at about a phone's width */
+  .plate--siteplan{max-width:420px;margin-inline:auto}
+  .plate--siteplan .plate__img{aspect-ratio:var(--arm)}
+}
+@media (max-width:700px){
+  .tri{max-width:420px}
+  body{font-size:17px}
+  .plan .plate__img{aspect-ratio:var(--arm)}
+  .plate__img{aspect-ratio:var(--arm)}
+  .brand__sub{display:none}
+  .snd{display:none}
+  .rules,.people{grid-template-columns:minmax(0,1fr)}
+  .species>div{grid-template-columns:minmax(0,1fr);gap:4px}
+  .ladder li{grid-template-columns:78px minmax(0,1fr)}
+  .plate__frame::before{transform:translate(8px,8px)}
+  .plate--hero{margin-inline:0}
+  .plate.in .plate__frame::before{transform:translate(calc(var(--slip)*.5),calc(var(--slip)*.4))}
+  .plate__frame::after{transform:translate(calc(var(--slip)*-.3),calc(var(--slip)*-.24))}
+  .nav{gap:10px;padding:8px 14px 0}
+  .nav__links{margin-inline:-14px;padding-inline:14px;gap:18px}
+  .brand{gap:9px}
+  .brand svg{width:30px;height:30px}
+  .brand__name{font-size:21px}
+  .btn--sm{padding:9px 11px;font-size:14px;white-space:nowrap}
+  .doc{padding:20px 18px 22px;font-size:14px}
+  .doc table{font-size:12px}
+  /* the trail table fits the screen rather than scrolling sideways, so the status column, which is the one that
+     changes, is always in view: smaller type, tighter cells, and each trail's number above its name */
+  .tbl{min-width:0;font-size:15px}
+  .tbl th,.tbl td{padding:12px 10px 12px 0}
+  .tbl td:not(.status){white-space:nowrap}
+  .tbl th:last-child,.tbl td:last-child{padding-right:0}
+  .tbl thead th{font-size:13px}
+  .tbl tbody th{font-size:16.5px}
+  .tbl tbody th b{display:grid;margin:0 0 5px;width:22px;height:22px;font-size:12px}
+  /* the programs table fits the screen the same way: each program's facts on one line and its note under them */
+  .tbl--progs,.tbl--progs thead,.tbl--progs tbody{display:block}
+  .tbl--progs tr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,.62fr);column-gap:8px;border-bottom:1px solid var(--line)}
+  .tbl--progs thead tr{border-bottom:1.5px solid var(--ink)}
+  .tbl.tbl--progs th,.tbl.tbl--progs td{border-bottom:0;padding:12px 0 4px;white-space:normal}
+  .tbl.tbl--progs thead th{padding-bottom:8px}
+  .tbl--progs thead th:last-child{display:none}
+  .tbl.tbl--progs .progs__note{grid-column:1/-1;width:auto;padding:2px 0 14px}
+  .alerts__list{grid-template-columns:minmax(0,1fr)}
+  .log__list li,.hours>div{grid-template-columns:minmax(0,1fr);gap:2px}
+  .doc--sheet,.doc--count{padding:20px 16px}
+  .board{gap:18px 10px;padding:16px 8px 30px}
+  .tag{width:calc(50% - 6px);max-width:186px}
+  .tag__paper{padding:28px 11px 12px}
+  /* the way on, one to a line: the trail before, the trail after, then all of them. Side by side, a long name
+     would leave its arrow on a line of its own. */
+  .onward{grid-template-columns:minmax(0,1fr);gap:4px}
+  .onward>*{justify-self:start;padding:6px 0}
+  .onward>:nth-child(2){order:1}
+  .onward>:empty{display:none}
+  .onward>:last-child{justify-self:start;text-align:left}
+}
+@media (prefers-reduced-motion:reduce){
+  .ticker{white-space:normal}
+  .ticker__run{animation:none;width:auto}
+  .ticker__set{flex-wrap:wrap;gap:6px 28px}
+  .ticker__set[aria-hidden]{display:none}
+  #main.slip,#flash.go,.night::before,.typed span::after,.ly.creep,.ly.creep [data-from]{animation:none}
+  .plate__frame::before,.plate__frame::after,.btn{transition:none}
+}

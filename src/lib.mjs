@@ -98,6 +98,11 @@ let gseed = 0;
 // Step past n of the automatic grain patterns, for a stippled thing that is left out of a picture, so that
 // everything stippled after it keeps the pattern it had.
 export const grainSkip = n => { gseed += n; };
+// Where the two automatic counters stand (ids for gradients, clips and stored paths; grain pattern numbers), and a way
+// to set them. scenes.mjs starts every picture from its own fixed pair, so a picture comes out the same whichever
+// pictures were drawn before it, and no two pictures on a page can share an id.
+export const counters = () => [uid, gseed];
+export const startAt = ([ids, grains]) => { uid = ids; gseed = grains; };
 export function grain(x, y, w, h, spec, color, { clipId, opacity = 1, seed } = {}){
   if (w < 0) { x += w; w = -w; }
   const g = { ...spec, c: color, n: seed ?? (++gseed) };

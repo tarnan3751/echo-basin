@@ -1,0 +1,7 @@
+shots/
+.DS_Store
+
+# Working notes, kept on this machine only
+CLAUDE.md
+.claude/
+docs/story-bible.md

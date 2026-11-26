@@ -54,5 +54,7 @@
     btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.textContent = on ? 'Sound on' : 'Sound off';
     apply(); schedule(); if (on) setTimeout(phrase, 2500);
   });
-  window.__sound = { stage: function (n) { stage = n; apply(); if (on && n >= 4) setTimeout(phrase, 1200); } };
+  // The sound belongs to the visit: pages swapped in place (bible 10.8) leave it playing. context() and on() are for
+  // walk.mjs, which checks that it does.
+  window.__sound = { stage: function (n) { stage = n; apply(); if (on && n >= 4) setTimeout(phrase, 1200); }, context: function () { return ctx; }, on: function () { return on; } };
 })();
